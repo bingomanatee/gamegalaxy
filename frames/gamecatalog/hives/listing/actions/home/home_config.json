@@ -1,0 +1,44 @@
+{
+    "static": {
+        "js": "/js/home"
+    },
+    "javascript": [
+
+        {
+            "url": "/js/home/rest.js",
+            "name": "rest",
+            "defer": true,
+            "context": "foot"
+
+        },
+
+        {
+            "url": "/js/home/giantbomb.js",
+            "name": "giantbomb",
+            "defer": true,
+            "context": "foot",
+            "requires": ["rest", "lodash"]
+
+        },
+
+        {
+            "url": "/js/home/vendor/lodash.js",
+            "name": "lodash",
+            "defer": true,
+            "context": "foot"
+
+        },
+
+        {
+            "url": "/js/home/home.js",
+            "name": "home_main",
+            "defer": true,
+            "context": "foot",
+            "requires": ["giantbomb"]
+        }
+
+    ],
+    "routes": {
+        "get": "/"
+    }
+}

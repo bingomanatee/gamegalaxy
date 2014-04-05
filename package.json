@@ -1,0 +1,29 @@
+{
+  "name": "gamegalaxy",
+  "version": "0.0.1",
+  "description": "an explorer for game development",
+  "main": "web.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Dave Edelhart",
+  "license": "BSD-2-Clause",
+  "dependencies": {
+    "express": "~3.4.8",
+    "hive-menu": "0.0.1",
+    "q": "~1.0.0",
+    "ejs": "~0.8.5",
+    "hive-model": "~0.1.2",
+    "hive-mvc": "~0.1.1-a",
+    "moment": "~2.5.1",
+    "hive-loader": "0.0.2",
+    "hive-component": "0.0.1-a",
+    "underscore": "^1.6.0",
+    "gate": "^0.3.0",
+    "order-by-prereq": "0.0.2",
+    "request": "~2.34.0"
+  },
+  "devDependencies": {
+    "tap": "~0.4.8"
+  }
+}

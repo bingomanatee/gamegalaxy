@@ -1,0 +1,8 @@
+{
+    "routes": {
+        "get": "/giantbomb/games",
+        "post": "/giantbomb/games"
+    },
+
+    "handler_failsafe_time": 10000
+}
