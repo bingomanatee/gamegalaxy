@@ -1,12 +1,5 @@
-(function (root) {
-
-    root.$rest = function (url, type, params, onSuccess, onFail) {
-
-        if (_.isFunction(params)) {
-            onFail = onSuccess;
-            onSuccess = params;
-            params = null;
-        }
+define(function (require, exports, module) {
+    module.exports = function (url, type, params, onSuccess, onFail) {
 
         var request = new XMLHttpRequest();
         var result = request.open(type.toUpperCase(), url, true);
@@ -45,6 +38,6 @@
 
         request.send(data);
 
-    }
+    };
 
-})(window);
+});

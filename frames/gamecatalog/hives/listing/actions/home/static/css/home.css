@@ -1,0 +1,49 @@
+.header {
+    background-color: #ad6704;
+    color: white;
+
+}
+
+.header h1 {
+    font-size: 200%;
+    font-weight: bold;
+    margin: 0;
+    padding: 0;
+    margin-top: 0.125em;
+    margin-bottom: 0.125em;
+}
+
+.footer {
+    background: -moz-linear-gradient(top, rgba(173, 103, 4, 0) 0%, rgba(173, 103, 4, 0) 50%, rgba(173, 103, 4, 0.25) 85%, rgba(173, 103, 4, 0.65) 100%); /* FF3.6+ */
+    background: -webkit-gradient(linear, left top, left bottom, color-stop(0%, rgba(173, 103, 4, 0)), color-stop(50%, rgba(173, 103, 4, 0)), color-stop(85%, rgba(173, 103, 4, 0.25)), color-stop(100%, rgba(173, 103, 4, 0.65))); /* Chrome,Safari4+ */
+    background: -webkit-linear-gradient(top, rgba(173, 103, 4, 0) 0%, rgba(173, 103, 4, 0) 50%, rgba(173, 103, 4, 0.25) 85%, rgba(173, 103, 4, 0.65) 100%); /* Chrome10+,Safari5.1+ */
+    background: -o-linear-gradient(top, rgba(173, 103, 4, 0) 0%, rgba(173, 103, 4, 0) 50%, rgba(173, 103, 4, 0.25) 85%, rgba(173, 103, 4, 0.65) 100%); /* Opera 11.10+ */
+    background: -ms-linear-gradient(top, rgba(173, 103, 4, 0) 0%, rgba(173, 103, 4, 0) 50%, rgba(173, 103, 4, 0.25) 85%, rgba(173, 103, 4, 0.65) 100%); /* IE10+ */
+    background: linear-gradient(to bottom, rgba(173, 103, 4, 0) 0%, rgba(173, 103, 4, 0) 50%, rgba(173, 103, 4, 0.25) 85%, rgba(173, 103, 4, 0.65) 100%); /* W3C */
+    filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#00ad6704', endColorstr='#a6ad6704', GradientType=0); /* IE6-9 */
+
+}
+
+.entry-frame {
+    background-color: rgb(245, 245, 245)
+}
+
+.label {
+    font-weight: bold;
+}
+
+#search-input {
+
+    font-size: 100%;
+    padding: 0.25em;
+    width: 240px;
+
+}
+
+* {
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+
+.game-list {
+    background-color: yellow;
+}
