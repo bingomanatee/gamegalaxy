@@ -56,8 +56,11 @@ define(function (require, exports, module) {
     var platformDialogContainer;
     var platformGridContainer;
 
-    function _showPlatformDialog() {
-        var tiles = _gamePlatformTiles();
+    var entrySurface;
+    var filterLabelSurface;
+
+    function showPlatformDialog() {
+        var tiles = gamePlatformTiles();
         if (!platformDialogContainer) {
             platformDialogContainer = new ContainerSurface({
                 size: [800, 700],
@@ -69,7 +72,7 @@ define(function (require, exports, module) {
             }));
             mainContentNode.add(new Modifier({origin: [0.5, 0.5]})).add(platformDialogContainer);
 
-             platformGridContainer = new GridLayout({
+            platformGridContainer = new GridLayout({
                 dimensions: [6, 7],
                 size: [800, 550]
             });
@@ -84,13 +87,13 @@ define(function (require, exports, module) {
         platformGridContainer.sequenceFrom(tiles);
     }
 
-    function _platformNames(game) {
+    function platformNames(game) {
         return _.map(game.platforms, function (p) {
             return platform && (p.abbreviation == platform.abbreviation) ? '<b>' + p.abbreviation + '</b>' : p.abbreviation
         }).join(', ');
     }
 
-    function _hoverClasses(target, ifOverClasses, ifOutClasses){
+    function hoverClasses(target, ifOverClasses, ifOutClasses) {
         target.on('mouseover', function () {
             target.setClasses(ifOverClasses)
         });
@@ -100,12 +103,80 @@ define(function (require, exports, module) {
         });
     }
 
-    function _setSearchPlatform(p) {
+    function updateGameList(text) {
+        searchChangeDelay = null;
+        platform = null;
+        main.setContent('<p>Searching for &quot;' + text + '&quot; -- please wait</p>');
+        console.log('clearing foundGames');
+        foundGames = [];
+        var thisSearch = ++searchEdition;
+
+        giantbomb.games({filter: 'name:' + encodeURIComponent(text)}, function (data) {
+            main.setContent('');
+            mainContext.emit('game filter update');
+            if (searchEdition == thisSearch) {
+                console.log('games containing', text, ':', data);
+            }
+
+            foundGames = data.results;
+            var resultViews = _.map(games(), gameToNode);
+            gameListScrollView.sequenceFrom(resultViews);
+
+            function _lastSet(data) {
+                return data.number_of_total_results <= data.offset + data.number_of_page_results;
+            }
+
+            function _expandList(data) {
+                if (!(thisSearch == searchEdition)) {
+                    console.log('aborting old poll');
+                    return;
+                }
+                if (!_lastSet(data)) {
+
+                    var offset = data.offset + 100;
+                    console.log('getting ' + text + ' from ', offset);
+                    giantbomb.games({filter: 'name:' + encodeURIComponent(text), offset: offset},
+                        function (addedData) {
+                            if (!(thisSearch == searchEdition)) {
+                                console.log('rest -- aborting old poll');
+                                return;
+                            }
+                            if (!addedData.results) {
+                                console.log('bad data');
+                                return;
+                            }
+                            foundGames = foundGames.concat(addedData.results);
+                            gameListScrollView.sequenceFrom(_.map(games, gameToNode));
+                            console.log('loaded records from ', offset);
+
+                            if ((thisSearch == searchEdition) && !_lastSet(addedData)) {
+                                console.log('getting ' + text + ' from ', addedData.offset);
+                                _expandList(addedData);
+                            } else {
+                                console.log('end of pull for ', text);
+                            }
+                        });
+
+                } else {
+                    console.log('end of pull for ', text);
+                }
+            }
+
+            _expandList(data);
+        });
+
+    }
+
+    function highlightGame() {
+
+    }
+
+    function setSearchPlatform(p) {
         platform = p;
         mainContext.emit('game filter update');
     }
 
-    function _gamePlatformTiles() {
+    function gamePlatformTiles() {
 
         var gamePlatforms = _.compact(_.flatten(_.pluck(foundGames, 'platforms')));
         gamePlatforms = _.groupBy(gamePlatforms, 'name');
@@ -119,17 +190,17 @@ define(function (require, exports, module) {
                 classes: ['platform-icon']
             });
 
-            _hoverClasses(platformSurface, ['platform-icon', 'hover'], ['platform-icon']);
+            hoverClasses(platformSurface, ['platform-icon', 'hover'], ['platform-icon']);
 
             platformSurface.on('click', function () {
-                _setSearchPlatform(platform);
+                setSearchPlatform(platform);
                 platformDialogContainer.setProperties({display: 'none'});
             });
             return platformSurface;
         });
     }
 
-    function _sortPrefix(field) {
+    function sortPrefix(field) {
         console.log('sort by ', field);
         if (field != sortKey) {
             return '';
@@ -140,19 +211,19 @@ define(function (require, exports, module) {
         }
     }
 
-    function _setSortKey(key) {
+    function setSortKey(key) {
         if (sortKey == key) {
             reverseSort = !reverseSort;
         }
         sortKey = key;
 
-        nameLabel.setContent(_sortPrefix('name') + 'Name');
-        platformLabel.setContent(_sortPrefix('platform') + 'Platform');
-        releasedLabel.setContent(_sortPrefix('released') + 'Released');
-        gameListScrollView.sequenceFrom(_.map(_games(), _gameToNode));
+        nameLabel.setContent(sortPrefix('name') + 'Name');
+        platformLabel.setContent(sortPrefix('platform') + 'Platform');
+        releasedLabel.setContent(sortPrefix('released') + 'Released');
+        gameListScrollView.sequenceFrom(_.map(games(), gameToNode));
     }
 
-    function _games() {
+    function games() {
         var games = foundGames;
         if (platform) {
             games = _.filter(games, function (game) {
@@ -166,21 +237,19 @@ define(function (require, exports, module) {
         return reverseSort ? games.reverse() : games;
     }
 
-    function _gameToNode(game) {
+    function gameToNode(game) {
         var gameRowContainer = new ContainerSurface({
             size: [undefined, GAME_ROW_ITEM_HEIGHT],
             classes: ['game-row']
         });
 
-        _hoverClasses(gameRowContainer, ['game-row', 'hover'], ['game-row']);
+        hoverClasses(gameRowContainer, ['game-row', 'hover'], ['game-row']);
 
         var platformSurface = new Surface({
             size: [GAME_ROW_ITEM_PLATFORM_WIDTH, GAME_ROW_ITEM_HEIGHT],
             classes: ['game-row-platform', 'game-row-cell'],
-            content: _platformNames(game)
+            content: platformNames(game)
         });
-
-        
 
         gameRowContainer.add(new Surface({
             size: [GAME_ROW_NAME_WIDTH, GAME_ROW_ITEM_HEIGHT],
@@ -200,7 +269,7 @@ define(function (require, exports, module) {
         return gameRowContainer;
     }
 
-    function _getListHeight() {
+    function getListHeight() {
         return window.innerHeight
             - (FOOTER_HEIGHT + HEADER_HEIGHT + ENTRY_HEIGHT + GAME_HEADER_HEIGHT);
     }
@@ -208,12 +277,76 @@ define(function (require, exports, module) {
     function sizeEntrySurface() {
         var size = [window.innerWidth - 2 * ENTRY_MARGIN, 50];
         entrySurface.setSize(size);
-        listContainer.setSize([undefined, _getListHeight()]);
+        listContainer.setSize([undefined, getListHeight()]);
     }
 
-    function _clearPlatform() {
+    function clearPlatform() {
         platform = null;
         mainContext.emit('game filter update');
+    }
+
+    function initSearchBar() {
+
+        entrySurface = new ContainerSurface({
+            size: [window.innerWidth - 2 * ENTRY_MARGIN, ENTRY_HEIGHT],
+            classes: ['entry-frame']
+        });
+
+        var entryNode = new RenderNode({
+            getSize: function () {
+                return  [window.innerWidth - 2 * ENTRY_MARGIN, ENTRY_HEIGHT - 20];
+            }
+        });
+
+        entryNode.add(entrySurface);
+        entrySurface.add(new Modifier({origin: [0, 0.5]}))
+            .add(new Surface({
+                content: 'Search for games:',
+                classes: ['label'],
+                size: [SEARCH_LABEL_SIZE, 25]
+            }));
+
+        filterLabelSurface = new Surface({
+            content: 'filter text',
+            size: [350, 25],
+            classes: ['filter-label']
+        });
+        filterLabelSurface.on('deploy', function () {
+            var removePlatform = document.getElementById('clear-platform');
+
+            if (removePlatform) {
+                removePlatform.removeEventListener('click', clearPlatform); // only way to do this ... arg
+                removePlatform.addEventListener('click', clearPlatform);
+            }
+        });
+
+        entrySurface.add(new Modifier({
+            origin: [0, 0.5],
+            transform: Transform.translate(SEARCH_LABEL_SIZE + SEARCH_INPUT_SIZE, 0)
+        })).add(filterLabelSurface);
+
+        inputSurface.on('deploy', function () {
+            document.getElementById('search-input').addEventListener('keyup', function () {
+                var text = document.getElementById('search-input').value;
+                console.log('text:', text);
+
+                if (searchChangeDelay) {
+                    clearTimeout(searchChangeDelay);
+                }
+
+                searchChangeDelay = _.delay(
+                    updateGameList, 800, text);
+
+            })
+        });
+
+        entrySurface.add(new Modifier({
+            origin: [0, 0.33],
+            transform: Transform.translate(160, 0)}))
+            .add(inputSurface);
+
+        mainContentNode.add(new Modifier({transform: Transform.translate(ENTRY_MARGIN, ENTRY_MARGIN)}))
+            .add(entryNode);
     }
 
     mainContext.on('game filter update', function () {
@@ -222,7 +355,7 @@ define(function (require, exports, module) {
         }
         filterLabelSurface.setContent(_filterText({platform: platform}));
         if (foundGames.length && gameListScrollView) {
-            var resultViews = _.map(_games(), _gameToNode);
+            var resultViews = _.map(games(), gameToNode);
             gameListScrollView.sequenceFrom(resultViews);
         }
     });
@@ -230,6 +363,11 @@ define(function (require, exports, module) {
     var layout = new HeaderFooterLayout({
         headerSize: 100,
         footerSize: 50
+    });
+
+    var inputSurface = new Surface({
+        content: '<input id="search-input" class="search" type="text" />',
+        size: [SEARCH_INPUT_SIZE, 25]
     });
 
     layout.header.add(new Surface({
@@ -262,142 +400,19 @@ define(function (require, exports, module) {
         size: [window.innerWidth - 2 * ENTRY_MARGIN, ENTRY_HEIGHT]
     }));
 
-    var entrySurface = new ContainerSurface({
-        size: [window.innerWidth - 2 * ENTRY_MARGIN, ENTRY_HEIGHT],
-        classes: ['entry-frame']
-    });
+    initSearchBar();
 
-    var entryNode = new RenderNode({
-        getSize: function () {
-            return  [window.innerWidth - 2 * ENTRY_MARGIN, ENTRY_HEIGHT - 20];
-        }
-    });
-
-    entryNode.add(entrySurface);
-    entrySurface.add(new Modifier({origin: [0, 0.5]}))
-        .add(new Surface({
-            content: 'Search for games:',
-            classes: ['label'],
-            size: [SEARCH_LABEL_SIZE, 25]
-        }));
-
-    var filterLabelSurface = new Surface({
-        content: 'filter text',
-        size: [350, 25],
-        classes: ['filter-label']
-    });
-    filterLabelSurface.on('deploy', function () {
-            var removePlatform = document.getElementById('clear-platform');
-
-            if (removePlatform) {
-                removePlatform.removeEventListener('click', _clearPlatform); // only way to do this ... arg
-                removePlatform.addEventListener('click', _clearPlatform);
-            }
-        });
-
-    entrySurface.add(new Modifier({
-        origin: [0, 0.5],
-        transform: Transform.translate(SEARCH_LABEL_SIZE + SEARCH_INPUT_SIZE, 0)
-    })).add(filterLabelSurface);
-
-    var inputSurface = new Surface({
-        content: '<input id="search-input" class="search" type="text" />',
-        size: [SEARCH_INPUT_SIZE, 25]
-    });
 
     var searchChangeDelay;
     var searchEdition = 0;
-    inputSurface.on('deploy', function () {
-        document.getElementById('search-input').addEventListener('keyup', function () {
-            var text = document.getElementById('search-input').value;
-            console.log('text:', text);
-
-            if (searchChangeDelay) {
-                clearTimeout(searchChangeDelay);
-            }
-
-            searchChangeDelay = _.delay(function (text) {
-                searchChangeDelay = null;
-                platform = null;
-                main.setContent('<p>Searching for &quot;' + text + '&quot; -- please wait</p>');
-                console.log('clearing foundGames');
-                foundGames = [];
-                var thisSearch = ++searchEdition;
-
-                giantbomb.games({filter: 'name:' + encodeURIComponent(text)}, function (data) {
-                    main.setContent('');
-                    mainContext.emit('game filter update');
-                    if (searchEdition == thisSearch) {
-                        console.log('games containing', text, ':', data);
-                    }
-
-                    foundGames = data.results;
-                    var resultViews = _.map(_games(), _gameToNode);
-                    gameListScrollView.sequenceFrom(resultViews);
-
-                    function _lastSet(data) {
-                        return data.number_of_total_results <= data.offset + data.number_of_page_results;
-                    }
-
-                    function _expandList(data) {
-                        if (!(thisSearch == searchEdition)) {
-                            console.log('aborting old poll');
-                            return;
-                        }
-                        if (!_lastSet(data)) {
-
-                            var offset = data.offset + 100;
-                            console.log('getting ' + text + ' from ', offset);
-                            giantbomb.games({filter: 'name:' + encodeURIComponent(text), offset: offset},
-                                function (addedData) {
-                                    if (!(thisSearch == searchEdition)) {
-                                        console.log('rest -- aborting old poll');
-                                        return;
-                                    }
-                                    if (!addedData.results) {
-                                        console.log('bad data');
-                                        return;
-                                    }
-                                    foundGames = foundGames.concat(addedData.results);
-                                    gameListScrollView.sequenceFrom(_.map(_games, _gameToNode));
-                                    console.log('loaded records from ', offset);
-
-                                    if ((thisSearch == searchEdition) && !_lastSet(addedData)) {
-                                        console.log('getting ' + text + ' from ', addedData.offset);
-                                        _expandList(addedData);
-                                    } else {
-                                        console.log('end of pull for ', text);
-                                    }
-                                });
-
-                        } else {
-                            console.log('end of pull for ', text);
-                        }
-                    }
-
-                    _expandList(data);
-                });
-
-            }, 800, text);
-
-        })
-    });
-
-    entrySurface.add(new Modifier({
-        origin: [0, 0.33],
-        transform: Transform.translate(160, 0)}))
-        .add(inputSurface);
-
-    mainContentNode.add(new Modifier({transform: Transform.translate(ENTRY_MARGIN, ENTRY_MARGIN)}))
-        .add(entryNode);
 
     var listContainer = new ContainerSurface({
-        size: [undefined, _getListHeight()],
+        size: [undefined, getListHeight()],
         classes: ['game-list']
     });
 
     var gameListScrollView = new Scrollview({
-        clipSize: _getListHeight()
+        clipSize: getListHeight()
     });
 
     listContainer.add(gameListScrollView);
@@ -418,11 +433,11 @@ define(function (require, exports, module) {
     var nameLabel = new Surface({
         size: [GAME_ROW_NAME_WIDTH, GAME_HEADER_LABEL_HEIGHT],
         classes: ['game-header-label', 'name'],
-        content: _sortPrefix('name') + 'Name'
+        content: sortPrefix('name') + 'Name'
     });
 
     nameLabel.on('click', function () {
-        _setSortKey('name');
+        setSortKey('name');
     });
 
     var platformLabelContainer = new ContainerSurface({
@@ -452,7 +467,7 @@ define(function (require, exports, module) {
         platformSortButton.setClasses(['sort-icon'])
     });
 
-    platformSortButton.on('click', _showPlatformDialog);
+    platformSortButton.on('click', showPlatformDialog);
 
     platformLabelContainer.add(new Modifier({origin: [0, 0.5]}))
         .add(platformSortButton);
@@ -466,7 +481,7 @@ define(function (require, exports, module) {
     });
 
     releasedLabel.on('click', function () {
-        _setSortKey('released');
+        setSortKey('released');
     });
 
     listHeaderNode.add(listHeaderCS);
