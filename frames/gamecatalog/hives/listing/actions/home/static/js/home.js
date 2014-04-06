@@ -33,7 +33,7 @@ define(function (require, exports, module) {
     var SEARCH_INPUT_SIZE = 350;
 
     // game row item sizes
-    var GAME_ROW_ITEM_HEIGHT = 25;
+    var GAME_ROW_ITEM_HEIGHT = 30;
     var GAME_ROW_ITEM_PLATFORM_WIDTH = 250;
     var GAME_ROW_NAME_WIDTH = 300;
     var GAME_ROW_ITEM_DATE_WIDTH = 100;
@@ -84,6 +84,22 @@ define(function (require, exports, module) {
         platformGridContainer.sequenceFrom(tiles);
     }
 
+    function _platformNames(game) {
+        return _.map(game.platforms, function (p) {
+            return platform && (p.abbreviation == platform.abbreviation) ? '<b>' + p.abbreviation + '</b>' : p.abbreviation
+        }).join(', ');
+    }
+
+    function _hoverClasses(target, ifOverClasses, ifOutClasses){
+        target.on('mouseover', function () {
+            target.setClasses(ifOverClasses)
+        });
+
+        target.on('mouseout', function () {
+            target.setClasses(ifOutClasses)
+        });
+    }
+
     function _setSearchPlatform(p) {
         platform = p;
         mainContext.emit('game filter update');
@@ -102,12 +118,9 @@ define(function (require, exports, module) {
                 content: _platformContent(platform),
                 classes: ['platform-icon']
             });
-            platformSurface.on('mouseover', function () {
-                platformSurface.setClasses(['platform-icon', 'hover']);
-            });
-            platformSurface.on('mouseout', function () {
-                platformSurface.setClasses(['platform-icon']);
-            });
+
+            _hoverClasses(platformSurface, ['platform-icon', 'hover'], ['platform-icon']);
+
             platformSurface.on('click', function () {
                 _setSearchPlatform(platform);
                 platformDialogContainer.setProperties({display: 'none'});
@@ -153,36 +166,38 @@ define(function (require, exports, module) {
         return reverseSort ? games.reverse() : games;
     }
 
-    function _platformNames(game) {
-        return _.map(game.platforms, function (p) {
-            return p.abbreviation
-        }).join(', ');
-    }
-
     function _gameToNode(game) {
-        var rn = new ContainerSurface({
+        var gameRowContainer = new ContainerSurface({
             size: [undefined, GAME_ROW_ITEM_HEIGHT],
             classes: ['game-row']
         });
-        rn.add(new Surface({
+
+        _hoverClasses(gameRowContainer, ['game-row', 'hover'], ['game-row']);
+
+        var platformSurface = new Surface({
+            size: [GAME_ROW_ITEM_PLATFORM_WIDTH, GAME_ROW_ITEM_HEIGHT],
+            classes: ['game-row-platform', 'game-row-cell'],
+            content: _platformNames(game)
+        });
+
+        
+
+        gameRowContainer.add(new Surface({
             size: [GAME_ROW_NAME_WIDTH, GAME_ROW_ITEM_HEIGHT],
             content: game.name,
-            classes: ['game-row-name']
+            classes: ['game-row-name', 'game-row-cell']
         }));
-        rn.add(new Modifier({
+        gameRowContainer.add(new Modifier({
             transform: Transform.translate(GAME_ROW_NAME_WIDTH, 0)
-        })).add(new Surface({
-            size: [GAME_ROW_ITEM_PLATFORM_WIDTH, GAME_ROW_ITEM_HEIGHT],
-            classes: ['game-row-platform'],
-            content: _platformNames(game)
-        }));
-        rn.add(new Modifier({
+        })).add(platformSurface);
+        gameRowContainer.add(new Modifier({
             transform: Transform.translate(GAME_ROW_NAME_WIDTH + GAME_ROW_ITEM_PLATFORM_WIDTH, 0)
         })).add(new Surface({
             size: [GAME_ROW_ITEM_DATE_WIDTH, GAME_ROW_ITEM_HEIGHT],
+            classes: ['game-row-date', 'game-row-cell'],
             content: game.original_release_date ? moment(new Date(game.original_release_date)).format('YYYY') : ''
         }));
-        return rn;
+        return gameRowContainer;
     }
 
     function _getListHeight() {
@@ -259,8 +274,8 @@ define(function (require, exports, module) {
     });
 
     entryNode.add(entrySurface);
-    entrySurface.add(new Modifier({origin: [0, 0.5]})
-    ).add(new Surface({
+    entrySurface.add(new Modifier({origin: [0, 0.5]}))
+        .add(new Surface({
             content: 'Search for games:',
             classes: ['label'],
             size: [SEARCH_LABEL_SIZE, 25]
@@ -303,6 +318,7 @@ define(function (require, exports, module) {
 
             searchChangeDelay = _.delay(function (text) {
                 searchChangeDelay = null;
+                platform = null;
                 main.setContent('<p>Searching for &quot;' + text + '&quot; -- please wait</p>');
                 console.log('clearing foundGames');
                 foundGames = [];
@@ -310,7 +326,7 @@ define(function (require, exports, module) {
 
                 giantbomb.games({filter: 'name:' + encodeURIComponent(text)}, function (data) {
                     main.setContent('');
-
+                    mainContext.emit('game filter update');
                     if (searchEdition == thisSearch) {
                         console.log('games containing', text, ':', data);
                     }

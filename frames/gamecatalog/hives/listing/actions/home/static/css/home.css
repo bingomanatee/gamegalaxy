@@ -24,6 +24,12 @@
 
 }
 
+.game-row {
+}
+.game-row.hover {
+    background-color: navajowhite;
+}
+
 .game-row-platform {
     text-overflow: ellipsis;
     overflow: hidden;
@@ -35,6 +41,12 @@
     overflow: hidden;
     white-space: nowrap;
     padding-left: 1em;
+}
+
+.game-row-cell {
+    padding-top: 3px;
+    padding-bottom: 3px;
+
 }
 
 .entry-frame {
