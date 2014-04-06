@@ -24,6 +24,19 @@
 
 }
 
+.game-row-platform {
+    text-overflow: ellipsis;
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+.game-row-name {
+    text-overflow: ellipsis;
+    overflow: hidden;
+    white-space: nowrap;
+    padding-left: 1em;
+}
+
 .entry-frame {
     background-color: rgb(245, 245, 245)
 }
@@ -36,8 +49,68 @@
 
     font-size: 100%;
     padding: 0.25em;
-    width: 240px;
+    width: 300px;
+}
 
+.filter-label {
+    color: rgb(100,100,100);
+}
+
+.sort-icon {
+    color: moccasin;
+}
+
+.sort-icon.hover {
+    background-color: #ad6704;
+}
+
+.dialog-frame {
+    background-color: #149bdf;
+    padding: 1.5em;
+    -webkit-box-shadow: 25px 29px 31px 0px rgba(0, 0, 0, 0.27);
+    -moz-box-shadow: 25px 29px 31px 0px rgba(0, 0, 0, 0.27);
+    box-shadow: 25px 29px 31px 0px rgba(0, 0, 0, 0.27);
+}
+
+.dialog h2 {
+    text-align: center;
+    color: white;
+    margin: 0;
+    padding: 0
+}
+
+.platform-icon {
+    font-size: 80%;
+    background-color: #0081c2;
+    border: 2px solid #149bdf;
+    padding: 4px 8px;
+}
+.platform-icon.hover {
+    background-color: #5db1e2;
+}
+
+.platform-icon h3 {
+    font-size: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+.platform-icon p {
+    font-size: 80%;
+    margin: 0;
+    padding: 0;
+}
+
+.game-header {
+    background-color: #df8505;
+}
+
+.game-header-label {
+    color: white;
+    font-weight: bold;
+}
+.game-header-label.name {
+    padding-left: 1em;
 }
 
 * {
@@ -45,5 +118,5 @@
 }
 
 .game-list {
-    background-color: yellow;
+    overflow: hidden;
 }

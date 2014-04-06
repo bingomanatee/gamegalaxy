@@ -7,6 +7,10 @@
         {
             "url": "/js/home/vendor/lodash.js",
             "context": "head"
+        },
+        {
+            "url": "/js/home/vendor/moment.min.js",
+            "context": "head"
         }
     ],
     "css": [

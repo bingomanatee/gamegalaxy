@@ -2,8 +2,7 @@ define(function (require, exports, module) {
     module.exports = function (url, type, params, onSuccess, onFail) {
 
         var request = new XMLHttpRequest();
-        var result = request.open(type.toUpperCase(), url, true);
-        console.log('result: ', result);
+        request.open(type.toUpperCase(), url, true);
 
         if (!onFail) {
             onFail = function () {

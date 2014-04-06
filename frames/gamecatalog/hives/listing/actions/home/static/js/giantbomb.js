@@ -12,7 +12,15 @@ var rest = require('rest');
                 params = {};
             }
 
-            rest(url, 'POST', params, callback, fail);
+            rest(url, 'POST', params, function(data){
+
+                _.each(data.results, function(game){
+                   game.released = game.original_release_date ? new Date(game.original_release_date).getFullYear() : '';
+                });
+
+                callback(data);
+
+            }, fail);
         }
     };
 
