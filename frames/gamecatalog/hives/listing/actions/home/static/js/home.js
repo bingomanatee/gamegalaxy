@@ -59,6 +59,21 @@ define(function (require, exports, module) {
     var entrySurface;
     var filterLabelSurface;
 
+    var searchChangeDelay;
+    var searchEdition = 0;
+
+    // list elements
+    var listContainer;
+    var listHeaderNode;
+    var listHeaderCS;
+    var nameLabel;
+    var platformLabel;
+    var gameListScrollView;
+    var platformLabelContainer;
+
+    var hoverQueue = {};
+    var totalGames = 0;
+
     function showPlatformDialog() {
         var tiles = gamePlatformTiles();
         if (!platformDialogContainer) {
@@ -73,8 +88,8 @@ define(function (require, exports, module) {
             mainContentNode.add(new Modifier({origin: [0.5, 0.5]})).add(platformDialogContainer);
 
             platformGridContainer = new GridLayout({
-                dimensions: [6, 7],
-                size: [800, 550]
+                dimensions: [6, 8],
+                size: [600, 550]
             });
 
             platformDialogContainer.add(new Modifier({
@@ -93,14 +108,45 @@ define(function (require, exports, module) {
         }).join(', ');
     }
 
-    function hoverClasses(target, ifOverClasses, ifOutClasses) {
+    function hoverClasses(target, ifOverClasses, ifOutClasses, key) {
         target.on('mouseover', function () {
-            target.setClasses(ifOverClasses)
+            target.setClasses(ifOverClasses);
+            if (key) {
+                if (hoverQueue[key]) {
+                    hoverQueue[key].setClasses(ifOutClasses || []);
+                    delete hoverQueue[key];
+                }
+                hoverQueue[key] = target;
+            }
         });
 
         target.on('mouseout', function () {
-            target.setClasses(ifOutClasses)
+            target.setClasses(ifOutClasses || []);
+            if (key && hoverQueue[key] === target) {
+                delete hoverQueue[key];
+            }
         });
+    }
+
+    var _statusTemplate = _.template('<%= found %> of <%= results %> retrieved <% if (active != found ){ %>(<%= active %> filtered records shown)<% } %>');
+
+    function updateStatus(data, activeGameSet) {
+        if (data){
+            totalGames = data.number_of_total_results;
+        }
+        var status = { results: totalGames};
+        status.active = activeGameSet.length;
+        status.found = foundGames.length;
+
+        footerSurface.setContent(_statusTemplate(status));
+    }
+
+    function renderGames(data) {
+        var activeGames = games();
+        var resultViews = _.map(activeGames, gameToNode);
+        gameListScrollView.sequenceFrom(resultViews);
+
+        updateStatus(data, activeGames);
     }
 
     function updateGameList(text) {
@@ -119,8 +165,7 @@ define(function (require, exports, module) {
             }
 
             foundGames = data.results;
-            var resultViews = _.map(games(), gameToNode);
-            gameListScrollView.sequenceFrom(resultViews);
+            renderGames(data);
 
             function _lastSet(data) {
                 return data.number_of_total_results <= data.offset + data.number_of_page_results;
@@ -132,7 +177,6 @@ define(function (require, exports, module) {
                     return;
                 }
                 if (!_lastSet(data)) {
-
                     var offset = data.offset + 100;
                     console.log('getting ' + text + ' from ', offset);
                     giantbomb.games({filter: 'name:' + encodeURIComponent(text), offset: offset},
@@ -146,7 +190,7 @@ define(function (require, exports, module) {
                                 return;
                             }
                             foundGames = foundGames.concat(addedData.results);
-                            gameListScrollView.sequenceFrom(_.map(games, gameToNode));
+                            renderGames(addedData);
                             console.log('loaded records from ', offset);
 
                             if ((thisSearch == searchEdition) && !_lastSet(addedData)) {
@@ -183,6 +227,7 @@ define(function (require, exports, module) {
         gamePlatforms = _.map(_.values(gamePlatforms), function (pList) {
             return pList[0];
         });
+        gamePlatforms = _.sortBy(gamePlatforms, 'abbreviation');
 
         return _.map(gamePlatforms, function (platform) {
             var platformSurface = new Surface({
@@ -190,7 +235,7 @@ define(function (require, exports, module) {
                 classes: ['platform-icon']
             });
 
-            hoverClasses(platformSurface, ['platform-icon', 'hover'], ['platform-icon']);
+            hoverClasses(platformSurface, ['platform-icon', 'hover'], ['platform-icon'], 'platform');
 
             platformSurface.on('click', function () {
                 setSearchPlatform(platform);
@@ -349,14 +394,103 @@ define(function (require, exports, module) {
             .add(entryNode);
     }
 
+    function initListContainer() {
+        listContainer = new ContainerSurface({
+            size: [undefined, getListHeight()],
+            classes: ['game-list']
+        });
+
+        gameListScrollView = new Scrollview({
+            clipSize: getListHeight()
+        });
+
+        listContainer.add(gameListScrollView);
+
+        listContainer.pipe(gameListScrollView);
+
+        mainContentNode.add(new Modifier({transform: Transform.translate(0, ENTRY_HEIGHT + GAME_HEADER_HEIGHT)}))
+            .add(listContainer);
+
+        listHeaderNode = new RenderNode();
+        mainContentNode.add(new Modifier({transform: Transform.translate(0, ENTRY_HEIGHT)})).add(listHeaderNode);
+
+        listHeaderCS = new ContainerSurface({
+            size: [undefined, GAME_HEADER_HEIGHT],
+            classes: ['game-header']
+        });
+
+        nameLabel = new Surface({
+            size: [GAME_ROW_NAME_WIDTH, GAME_HEADER_LABEL_HEIGHT],
+            classes: ['game-header-label', 'name'],
+            content: sortPrefix('name') + 'Name'
+        });
+
+        nameLabel.on('click', function () {
+            setSortKey('name');
+        });
+
+        platformLabelContainer = new ContainerSurface({
+            size: [GAME_ROW_ITEM_PLATFORM_WIDTH, GAME_HEADER_HEIGHT]
+        });
+
+        platformLabel = new Surface({content: 'Platform',
+            size: [GAME_ROW_ITEM_PLATFORM_WIDTH - ICON_WIDTH - ICON_MARGIN, GAME_HEADER_LABEL_HEIGHT],
+            classes: ['game-header-label']
+        });
+        platformLabelContainer.add(new Modifier({
+            origin: [0, 0.5],
+            transform: Transform.translate(ICON_WIDTH + ICON_MARGIN, 0)
+        })).add(platformLabel);
+
+        var platformSortButton = new Surface({
+            content: '&#9680;',
+            size: [ICON_WIDTH, GAME_HEADER_LABEL_HEIGHT],
+            classes: ['sort-icon']
+        });
+
+        platformSortButton.on('mouseover', function () {
+            platformSortButton.setClasses(['sort-icon', 'hover'])
+        });
+
+        platformSortButton.on('mouseout', function () {
+            platformSortButton.setClasses(['sort-icon'])
+        });
+
+        platformSortButton.on('click', showPlatformDialog);
+
+        platformLabelContainer.add(new Modifier({origin: [0, 0.5]}))
+            .add(platformSortButton);
+
+        var releasedLabel = new Surface({
+            size: [GAME_ROW_ITEM_DATE_WIDTH, GAME_HEADER_LABEL_HEIGHT],
+            classes: ['game-header-label'],
+            content: 'Released',
+            properties: {
+            }
+        });
+
+        releasedLabel.on('click', function () {
+            setSortKey('released');
+        });
+
+        listHeaderNode.add(listHeaderCS);
+        listHeaderCS.add(new Modifier({
+            origin: [0, 0.5]
+        })).add(nameLabel);
+        listHeaderCS.add(new Modifier({ transform: Transform.translate(GAME_ROW_NAME_WIDTH, 0)}))
+            .add(platformLabelContainer);
+        listHeaderCS.add(new Modifier({
+            origin: [0, 0.5], transform: Transform.translate(GAME_ROW_NAME_WIDTH + GAME_ROW_ITEM_PLATFORM_WIDTH, 0)}))
+            .add(releasedLabel);
+    }
+
     mainContext.on('game filter update', function () {
         if (!filterLabelSurface) {
             return;
         }
         filterLabelSurface.setContent(_filterText({platform: platform}));
         if (foundGames.length && gameListScrollView) {
-            var resultViews = _.map(games(), gameToNode);
-            gameListScrollView.sequenceFrom(resultViews);
+            renderGames(null)
         }
     });
 
@@ -400,117 +534,29 @@ define(function (require, exports, module) {
         size: [window.innerWidth - 2 * ENTRY_MARGIN, ENTRY_HEIGHT]
     }));
 
-    initSearchBar();
-
-
-    var searchChangeDelay;
-    var searchEdition = 0;
-
-    var listContainer = new ContainerSurface({
-        size: [undefined, getListHeight()],
-        classes: ['game-list']
-    });
-
-    var gameListScrollView = new Scrollview({
-        clipSize: getListHeight()
-    });
-
-    listContainer.add(gameListScrollView);
-
-    listContainer.pipe(gameListScrollView);
-
-    mainContentNode.add(new Modifier({transform: Transform.translate(0, ENTRY_HEIGHT + GAME_HEADER_HEIGHT)}))
-        .add(listContainer);
-
-    var listHeaderNode = new RenderNode();
-    mainContentNode.add(new Modifier({transform: Transform.translate(0, ENTRY_HEIGHT)})).add(listHeaderNode);
-
-    var listHeaderCS = new ContainerSurface({
-        size: [undefined, GAME_HEADER_HEIGHT],
-        classes: ['game-header']
-    });
-
-    var nameLabel = new Surface({
-        size: [GAME_ROW_NAME_WIDTH, GAME_HEADER_LABEL_HEIGHT],
-        classes: ['game-header-label', 'name'],
-        content: sortPrefix('name') + 'Name'
-    });
-
-    nameLabel.on('click', function () {
-        setSortKey('name');
-    });
-
-    var platformLabelContainer = new ContainerSurface({
-        size: [GAME_ROW_ITEM_PLATFORM_WIDTH, GAME_HEADER_HEIGHT]
-    });
-
-    var platformLabel = new Surface({content: 'Platform',
-        size: [GAME_ROW_ITEM_PLATFORM_WIDTH - ICON_WIDTH - ICON_MARGIN, GAME_HEADER_LABEL_HEIGHT],
-        classes: ['game-header-label']
-    });
-    platformLabelContainer.add(new Modifier({
-        origin: [0, 0.5],
-        transform: Transform.translate(ICON_WIDTH + ICON_MARGIN, 0)
-    })).add(platformLabel);
-
-    var platformSortButton = new Surface({
-        content: '&#9680;',
-        size: [ICON_WIDTH, GAME_HEADER_LABEL_HEIGHT],
-        classes: ['sort-icon']
-    });
-
-    platformSortButton.on('mouseover', function () {
-        platformSortButton.setClasses(['sort-icon', 'hover'])
-    });
-
-    platformSortButton.on('mouseout', function () {
-        platformSortButton.setClasses(['sort-icon'])
-    });
-
-    platformSortButton.on('click', showPlatformDialog);
-
-    platformLabelContainer.add(new Modifier({origin: [0, 0.5]}))
-        .add(platformSortButton);
-
-    var releasedLabel = new Surface({
-        size: [GAME_ROW_ITEM_DATE_WIDTH, GAME_HEADER_LABEL_HEIGHT],
-        classes: ['game-header-label'],
-        content: 'Released',
-        properties: {
-        }
-    });
-
-    releasedLabel.on('click', function () {
-        setSortKey('released');
-    });
-
-    listHeaderNode.add(listHeaderCS);
-    listHeaderCS.add(new Modifier({
-        origin: [0, 0.5]
-    })).add(nameLabel);
-    listHeaderCS.add(new Modifier({ transform: Transform.translate(GAME_ROW_NAME_WIDTH, 0)}))
-        .add(platformLabelContainer);
-    listHeaderCS.add(new Modifier({
-        origin: [0, 0.5], transform: Transform.translate(GAME_ROW_NAME_WIDTH + GAME_ROW_ITEM_PLATFORM_WIDTH, 0)}))
-        .add(releasedLabel);
-
-    sizeEntrySurface();
-
     layout.content.add(mainContentNode);
 
-    layout.footer.add(new Surface({
+    var footerSurface = new Surface({
         size: [undefined, FOOTER_HEIGHT],
-        content: "Footer",
+        content: "enter a search term to begin",
         classes: ["footer"],
         properties: {
             lineHeight: "50px",
             textAlign: "center"
         }
-    }));
+    });
+
+    layout.footer.add(footerSurface);
 
     mainContext.add(layout);
 
     mainContext.on('resize', sizeEntrySurface);
+
+    initSearchBar();
+
+    initListContainer();
+
+    sizeEntrySurface();
 
     mainContext.emit('game filter update');
 })
