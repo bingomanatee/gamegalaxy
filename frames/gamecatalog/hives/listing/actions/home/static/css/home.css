@@ -89,6 +89,11 @@
     background-color: #5db1e2;
 }
 
+#clear-platform {
+    font-weight: bold;
+    color: rgb(204,0,0);
+}
+
 .platform-icon h3 {
     font-size: 100%;
     margin: 0;

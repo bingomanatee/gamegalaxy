@@ -51,17 +51,43 @@ define(function (require, exports, module) {
     var platform = null;
 
     var _platformContent = _.template('<h3><%= abbreviation %></h3><p><%= name %></p>');
+    var _filterText = _.template('platform: <i><% if (platform){ %><%= platform.name %><span id="clear-platform">&times;</span><% } else { %>ALL<% } %></i>');
+
+    var platformDialogContainer;
+    var platformGridContainer;
+
+    function _showPlatformDialog() {
+        var tiles = _gamePlatformTiles();
+        if (!platformDialogContainer) {
+            platformDialogContainer = new ContainerSurface({
+                size: [800, 700],
+                classes: ['dialog-frame']
+            });
+            platformDialogContainer.add(new Surface({
+                content: '<h2>Platforms</h2>',
+                classes: ['dialog']
+            }));
+            mainContentNode.add(new Modifier({origin: [0.5, 0.5]})).add(platformDialogContainer);
+
+             platformGridContainer = new GridLayout({
+                dimensions: [6, 7],
+                size: [800, 550]
+            });
+
+            platformDialogContainer.add(new Modifier({
+                transform: Transform.translate(0, PLATFORM_HEADER_HEIGHT)
+            })).add(platformGridContainer);
+        } else {
+            platformDialogContainer.setProperties({display: 'block'});
+        }
+
+        platformGridContainer.sequenceFrom(tiles);
+    }
 
     function _setSearchPlatform(p) {
         platform = p;
         mainContext.emit('game filter update');
     }
-
-    var _filterText = _.template('platform: <i><%= platform ? platform.name : "ALL" %></i>');
-
-    mainContext.on('game filter update', function () {
-        filterLabelSurface.setContent(_filterText({platform: platform}));
-    });
 
     function _gamePlatformTiles() {
 
@@ -84,6 +110,7 @@ define(function (require, exports, module) {
             });
             platformSurface.on('click', function () {
                 _setSearchPlatform(platform);
+                platformDialogContainer.setProperties({display: 'none'});
             });
             return platformSurface;
         });
@@ -109,39 +136,22 @@ define(function (require, exports, module) {
         nameLabel.setContent(_sortPrefix('name') + 'Name');
         platformLabel.setContent(_sortPrefix('platform') + 'Platform');
         releasedLabel.setContent(_sortPrefix('released') + 'Released');
-        scrollView.sequenceFrom(_.map(_games(), _gameToNode));
+        gameListScrollView.sequenceFrom(_.map(_games(), _gameToNode));
     }
 
     function _games() {
-        var g = _.sortBy(foundGames, sortKey);
-        return reverseSort ? g.reverse() : g;
+        var games = foundGames;
+        if (platform) {
+            games = _.filter(games, function (game) {
+                return _.find(game.platforms, function (pf) {
+                    return pf.abbreviation == platform.abbreviation;
+                })
+            });
+        } else {
+        }
+        games = _.sortBy(games, sortKey);
+        return reverseSort ? games.reverse() : games;
     }
-
-    var layout = new HeaderFooterLayout({
-        headerSize: 100,
-        footerSize: 50
-    });
-
-    layout.header.add(new Surface({
-        size: [undefined, HEADER_HEIGHT],
-        content: "<h1>GameGalaxy</h1>",
-        classes: ["header"],
-        properties: {
-            lineHeight: "100px",
-            textAlign: "center"
-        }
-    }));
-
-    var main = new Surface({
-        size: [undefined, undefined],
-        content: "<p>Welcome to GameGalaxy: a GiantBomb data explorer</p>" +
-            "<p>Type a phrase in the field above to begin</p>",
-        classes: ["main"],
-        properties: {
-            lineHeight: window.innerHeight - 150 + 'px',
-            textAlign: "center"
-        }
-    });
 
     function _platformNames(game) {
         return _.map(game.platforms, function (p) {
@@ -174,6 +184,59 @@ define(function (require, exports, module) {
         }));
         return rn;
     }
+
+    function _getListHeight() {
+        return window.innerHeight
+            - (FOOTER_HEIGHT + HEADER_HEIGHT + ENTRY_HEIGHT + GAME_HEADER_HEIGHT);
+    }
+
+    function sizeEntrySurface() {
+        var size = [window.innerWidth - 2 * ENTRY_MARGIN, 50];
+        entrySurface.setSize(size);
+        listContainer.setSize([undefined, _getListHeight()]);
+    }
+
+    function _clearPlatform() {
+        platform = null;
+        mainContext.emit('game filter update');
+    }
+
+    mainContext.on('game filter update', function () {
+        if (!filterLabelSurface) {
+            return;
+        }
+        filterLabelSurface.setContent(_filterText({platform: platform}));
+        if (foundGames.length && gameListScrollView) {
+            var resultViews = _.map(_games(), _gameToNode);
+            gameListScrollView.sequenceFrom(resultViews);
+        }
+    });
+
+    var layout = new HeaderFooterLayout({
+        headerSize: 100,
+        footerSize: 50
+    });
+
+    layout.header.add(new Surface({
+        size: [undefined, HEADER_HEIGHT],
+        content: "<h1>GameGalaxy</h1>",
+        classes: ["header"],
+        properties: {
+            lineHeight: "100px",
+            textAlign: "center"
+        }
+    }));
+
+    var main = new Surface({
+        size: [undefined, undefined],
+        content: "<p>Welcome to GameGalaxy: a GiantBomb data explorer</p>" +
+            "<p>Type a phrase in the field above to begin</p>",
+        classes: ["main"],
+        properties: {
+            lineHeight: window.innerHeight - 150 + 'px',
+            textAlign: "center"
+        }
+    });
 
     layout.content.add(main);
 
@@ -208,6 +271,14 @@ define(function (require, exports, module) {
         size: [350, 25],
         classes: ['filter-label']
     });
+    filterLabelSurface.on('deploy', function () {
+            var removePlatform = document.getElementById('clear-platform');
+
+            if (removePlatform) {
+                removePlatform.removeEventListener('click', _clearPlatform); // only way to do this ... arg
+                removePlatform.addEventListener('click', _clearPlatform);
+            }
+        });
 
     entrySurface.add(new Modifier({
         origin: [0, 0.5],
@@ -233,7 +304,8 @@ define(function (require, exports, module) {
             searchChangeDelay = _.delay(function (text) {
                 searchChangeDelay = null;
                 main.setContent('<p>Searching for &quot;' + text + '&quot; -- please wait</p>');
-                scrollView.sequenceFrom([]);
+                console.log('clearing foundGames');
+                foundGames = [];
                 var thisSearch = ++searchEdition;
 
                 giantbomb.games({filter: 'name:' + encodeURIComponent(text)}, function (data) {
@@ -245,7 +317,7 @@ define(function (require, exports, module) {
 
                     foundGames = data.results;
                     var resultViews = _.map(_games(), _gameToNode);
-                    scrollView.sequenceFrom(resultViews);
+                    gameListScrollView.sequenceFrom(resultViews);
 
                     function _lastSet(data) {
                         return data.number_of_total_results <= data.offset + data.number_of_page_results;
@@ -271,7 +343,7 @@ define(function (require, exports, module) {
                                         return;
                                     }
                                     foundGames = foundGames.concat(addedData.results);
-                                    scrollView.sequenceFrom(_.map(_games, _gameToNode));
+                                    gameListScrollView.sequenceFrom(_.map(_games, _gameToNode));
                                     console.log('loaded records from ', offset);
 
                                     if ((thisSearch == searchEdition) && !_lastSet(addedData)) {
@@ -303,23 +375,18 @@ define(function (require, exports, module) {
     mainContentNode.add(new Modifier({transform: Transform.translate(ENTRY_MARGIN, ENTRY_MARGIN)}))
         .add(entryNode);
 
-    function _getListHeight() {
-        return window.innerHeight
-            - (FOOTER_HEIGHT + HEADER_HEIGHT + ENTRY_HEIGHT + GAME_HEADER_HEIGHT);
-    }
-
     var listContainer = new ContainerSurface({
         size: [undefined, _getListHeight()],
         classes: ['game-list']
     });
 
-    var scrollView = new Scrollview({
+    var gameListScrollView = new Scrollview({
         clipSize: _getListHeight()
     });
 
-    listContainer.add(scrollView);
+    listContainer.add(gameListScrollView);
 
-    listContainer.pipe(scrollView);
+    listContainer.pipe(gameListScrollView);
 
     mainContentNode.add(new Modifier({transform: Transform.translate(0, ENTRY_HEIGHT + GAME_HEADER_HEIGHT)}))
         .add(listContainer);
@@ -369,37 +436,6 @@ define(function (require, exports, module) {
         platformSortButton.setClasses(['sort-icon'])
     });
 
-    var platformDialogContainer;
-    var platformGridContainer;
-
-    function _showPlatformDialog() {
-        var tiles = _gamePlatformTiles();
-        if (!platformDialogContainer){
-            platformDialogContainer = new ContainerSurface({
-                size: [800, 700],
-                classes: ['dialog-frame']
-            });
-            platformDialogContainer.add(new Surface({
-                content: '<h2>Platforms</h2>',
-                classes: ['dialog']
-            }));
-            mainContentNode.add(new Modifier({origin: [0.5, 0.5]})).add(platformDialogContainer);
-
-            var platformGridContainer = new GridLayout({
-                dimensions: [6, 7],
-                size: [800, 550]
-            });
-
-            platformGridContainer.add(new Modifier({
-                transform: Transform.translate(0, PLATFORM_HEADER_HEIGHT)
-            })).add(gridContainer);
-        }
-
-
-        platformGridContainer.sequenceFrom(tiles);
-
-    }
-
     platformSortButton.on('click', _showPlatformDialog);
 
     platformLabelContainer.add(new Modifier({origin: [0, 0.5]}))
@@ -426,12 +462,6 @@ define(function (require, exports, module) {
     listHeaderCS.add(new Modifier({
         origin: [0, 0.5], transform: Transform.translate(GAME_ROW_NAME_WIDTH + GAME_ROW_ITEM_PLATFORM_WIDTH, 0)}))
         .add(releasedLabel);
-
-    function sizeEntrySurface() {
-        var size = [window.innerWidth - 2 * ENTRY_MARGIN, 50];
-        entrySurface.setSize(size);
-        listContainer.setSize([undefined, _getListHeight()]);
-    }
 
     sizeEntrySurface();
 
