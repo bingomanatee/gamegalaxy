@@ -42,7 +42,7 @@ define(function (require, exports, module) {
     var GAME_HEADER_LABEL_HEIGHT = 25;
     var ICON_WIDTH = 20;
     var ICON_MARGIN = 8;
-    var CALLOUT_Z = 150;
+    var CALLOUT_Z = 0;
 
     // platform
     var PLATFORM_HEADER_HEIGHT = 50;
@@ -251,13 +251,21 @@ define(function (require, exports, module) {
 
     }
 
+    var CALLOUT_RATIO = 1.6;
+
     function calloutSize(scale) {
         if (!scale) {
             scale = 1;
         }
-        var height = remainingHeight(HEADER_HEIGHT, ENTRY_HEIGHT, GAME_HEADER_HEIGHT, FOOTER_HEIGHT);
+        var width = remainingWidth(GAME_ROW_NAME_WIDTH, GAME_ROW_ITEM_PLATFORM_WIDTH, GAME_ROW_ITEM_DATE_WIDTH);
+        var maxHeight = remainingHeight(HEADER_HEIGHT, FOOTER_HEIGHT);
+        var height = CALLOUT_RATIO * width;
+        if (height > maxHeight) {
+            height = maxHeight;
+            width = height / CALLOUT_RATIO;
+        }
 
-        return [scale * 0.65 * height,
+        return [scale * width,
                 scale * height    ];
     }
 
@@ -267,17 +275,21 @@ define(function (require, exports, module) {
             size: calloutSize()
         });
 
-        gameCallout.add(new Surface({
-            classes: ['game-callout-back']
-        }));
+        layout.content.add(new Modifier({
+            origin: [1, 0]
+        })).add(gameCallout);
 
-        gameCalloutTitle = new Surface({
-            classes: ['game-callout-header'],
-            size: [undefined, 150]
+        var gameCalloutNode = new RenderNode();
+        var transformCallout = Transform.translate(0,0,0);
+        var gameCalloutModifier = new Modifier({
+            transform: transformCallout
         });
 
-        gameCallout.add(new Modifier({transform: Transform.translate(0, 0, 20)}))
-            .add(gameCalloutTitle);
+        gameCallout.add(gameCalloutModifier).add(gameCalloutNode);
+
+        gameCalloutNode.add(new Surface({
+            classes: ['game-callout-back']
+        }));
 
         gameCalloutImage = new ImageSurface({
             size: calloutSize(0.8),
@@ -286,66 +298,7 @@ define(function (require, exports, module) {
                 display: 'none'
             }
         });
-
-        gameCalloutPlatforms = new Surface({
-            size: [undefined, 60],
-            classes: ['callout-platform']
-        });
-
-        gameCallout.add(new Modifier({origin: [1, 0.5]})).add(gameCalloutImage);
-
-        gameCallout.add(new Modifier({origin: [0, 1], transform: Transform.translate(0, 0, 20)})).add(gameCalloutPlatforms);
-
-        var calloutPosition = Transform.multiply(Transform.moveThen([-100, 0, CALLOUT_Z], Transform.scale(0.7, 0.7, 0.7)),
-            Transform.rotateY(Math.PI / -6)
-        );
-
-        var calloutPositionNoRotate = Transform.multiply(Transform.moveThen([-120, 0, CALLOUT_Z], Transform.scale(1, 1, 1)),
-            Transform.rotateY(0)
-        );
-
-        var rotateTransitionTransform = new TransitionableTransform();
-        rotateTransitionTransform.setScale([0.7, 0.7, 1]);
-        rotateTransitionTransform.setTranslate([-150, 0, 100]);
-        rotateTransitionTransform.setRotate([0, Math.PI / -8, 0]);
-
-        var calloutModifier = new Modifier({origin: [1, 0],
-            transform: calloutPosition
-        });
-
-        layout.content.add(calloutModifier)
-            .add(gameCallout);
-
-        gameCalloutInfoButton = new Surface({
-            classes: ['button', 'info-button'],
-
-            content: 'Description',
-            size: [130, 40],
-            properties: {
-                display: 'none'
-            }
-        });
-
-        gameCalloutInfoCloseButton = new Surface({
-            classes: ['button', 'info-button'],
-            content: '<span class="callout-info-close-x">&times</span> Close Description',
-            size: [200, 40],
-            properties: {
-                display: 'none'
-            }
-        });
-
-        hoverClasses(gameCalloutInfoCloseButton,
-            ['button', 'info-button', 'hover']
-            , ['button', 'info-button']);
-
-        gameCallout.add(new Modifier({
-            transform: Transform.translate(-10, -20, 20),
-            origin: [1, 1],
-            properties: {
-                display: 'none'
-            }
-        })).add(gameCalloutInfoCloseButton);
+        gameCalloutNode.add(new Modifier({origin: [1, 0.5]})).add(gameCalloutImage);
 
         gameCalloutText = new Surface({
             classes: ['game-callout-text'],
@@ -353,14 +306,36 @@ define(function (require, exports, module) {
                 display: "none"
             }
         });
+        gameCalloutNode.add(gameCalloutText);
 
-        gameCallout.add(new Modifier({transform: Transform.translate(0, 0, 10)}))
-            .add(gameCalloutText);
+        gameCalloutPlatforms = new Surface({
+            size: [undefined, 60],
+            classes: ['callout-platform']
+        });
+        gameCalloutNode.add(new Modifier({origin: [0, 1]})).add(gameCalloutPlatforms);
+
+        gameCalloutInfoButton = new Surface({
+            classes: ['button', 'info-button', 'info-close-button'],
+
+            content: 'Description',
+            size: [130, 40]
+        });
+
+        gameCalloutInfoCloseButton = new Surface({
+            classes: ['button', 'info-button'],
+            content: '<span class="callout-info-close-x">&times</span> Close Description',
+            size: [200, 40]
+        });
+
+        hoverClasses(gameCalloutInfoCloseButton,
+            ['button', 'info-button', 'hover']
+            , ['button', 'info-button']);
+
+
 
         gameCalloutInfoButton.on('click', function () {
             gameCalloutText.setProperties({display: 'block'});
             gameCalloutInfoCloseButton.setProperties({display: 'block'});
-            calloutModifier.setTransform(calloutPositionNoRotate, {duration: 500, curve: "easeInOut" });
             gameCalloutPlatforms.setProperties({display: 'none'});
 
         });
@@ -368,20 +343,27 @@ define(function (require, exports, module) {
         gameCalloutInfoCloseButton.on('click', function () {
             gameCalloutText.setProperties({display: 'none'});
             gameCalloutInfoCloseButton.setProperties({display: 'none'});
-            calloutModifier.setTransform(calloutPosition, {duration: 500, curve: "easeInOut" });
             gameCalloutPlatforms.setProperties({display: 'block'});
         });
 
         hoverClasses(gameCalloutInfoButton, ['button', 'info-button', 'hover']
             , ['button', 'info-button']);
 
-        gameCallout.add(new Modifier({
-            transform: Transform.translate(-10, -70),
-            origin: [1, 1],
-            properties: {
-                display: 'none'
-            }
+        gameCalloutNode.add(new Modifier({
+            origin: [1, 1]
         })).add(gameCalloutInfoButton);
+
+
+        gameCalloutNode.add(new Modifier({
+            origin: [1, 1]
+        })).add(gameCalloutInfoCloseButton);
+
+        gameCalloutTitle = new Surface({
+            classes: ['game-callout-header'],
+            size: [undefined, 150]
+        });
+
+        gameCalloutNode.add(new Modifier({size: [undefined, 150]})).add(gameCalloutTitle);
     }
 
     function highlightGame(game) {

@@ -119,6 +119,7 @@
     padding-bottom: 100px;
 }
 .info-button {
+    display: none;
     color: white;
     font-family: 'Roboto Condensed', Helvetica Neue, Arial, sans-serif;
     padding: 3px 6px;
@@ -132,6 +133,10 @@
     background: linear-gradient(to bottom, rgba(240, 183, 161, 1) 0%, rgba(140, 51, 16, 1) 50%, rgba(117, 34, 1, 1) 51%, rgba(191, 110, 78, 1) 100%); /* W3C */
     filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#f0b7a1', endColorstr='#bf6e4e', GradientType=0); /* IE6-9 */
 
+}
+
+.info-close-button {
+    z-index: 1000;
 }
 
 .info-button.hover {
