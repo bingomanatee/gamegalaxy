@@ -1,0 +1,9 @@
+{
+    "giantbomb": {
+        "api_key": "f4f2e19d29c30945cf9383ec1cb36fcad05b29a0"
+    },
+    "firebase": {
+        "database_url": "https://r2fz2jj5gfe.firebaseio-demo.com/"
+    }
+
+}
