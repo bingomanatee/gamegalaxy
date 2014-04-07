@@ -21,13 +21,14 @@ define(function (require, exports, module) {
     var ContainerSurface = require('famous/Surfaces/ContainerSurface');
     var Scrollview = require('famous/views/Scrollview');
     var GridLayout = require('famous/views/GridLayout');
-    var sortKey = 'name';
-    var reverseSort = false;
+    var ImageSurface = require('famous/surfaces/ImageSurface');
+    var Transitionable = require("famous/transitions/Transitionable");
+    var TransitionableTransform = require("famous/transitions/TransitionableTransform");
 
     // sizing context
     var ENTRY_MARGIN = 20;
     var ENTRY_HEIGHT = 70;
-    var HEADER_HEIGHT = 100;
+    var HEADER_HEIGHT = 80;
     var FOOTER_HEIGHT = 50;
     var SEARCH_LABEL_SIZE = 150;
     var SEARCH_INPUT_SIZE = 350;
@@ -41,18 +42,10 @@ define(function (require, exports, module) {
     var GAME_HEADER_LABEL_HEIGHT = 25;
     var ICON_WIDTH = 20;
     var ICON_MARGIN = 8;
-
-    var foundGames = [];
-
-    var mainContext = Engine.createContext();
+    var CALLOUT_Z = 150;
 
     // platform
     var PLATFORM_HEADER_HEIGHT = 50;
-    var platform = null;
-
-    var _platformContent = _.template('<h3><%= abbreviation %></h3><p><%= name %></p>');
-    var _filterText = _.template('platform: <i><% if (platform){ %><%= platform.name %><span id="clear-platform">&times;</span><% } else { %>ALL<% } %></i>');
-
     var platformDialogContainer;
     var platformGridContainer;
 
@@ -62,6 +55,19 @@ define(function (require, exports, module) {
     var searchChangeDelay;
     var searchEdition = 0;
 
+    // core elements
+    var layout;
+    var inputSurface;
+
+    // templates
+    var _platformContent = _.template('<h3><%= abbreviation %></h3><p><%= name %></p>');
+    var _filterText = _.template('platform: <i><% if (platform){ %><%= platform.name %><span id="clear-platform">&times;</span><% } else { %>ALL<% } %></i>');
+    var _statusTemplate = _.template('<%= found %> of <%= results %> retrieved <% if (active != found ){ %>(<%= active %> filtered records shown)<% } %>');
+    var _gameHeader = _.template('<h1><%= name %> (<%= original_release_date ? new Date(original_release_date).getFullYear()  : "?" %>)</h1>'// +
+        //   '<ul class="platforms"><% _.each(platforms, function(platform){ %><li><%= platform.abbreviation %></li><% }) %></ul>'
+    );
+    var _calloutPlatformsTemplate = _.template('<% if (platforms) { platforms.forEach(function(p, i){ %><% if (i) { %><span class="callout-platform-bullet"> &bull;</span> <% } %><div class="platform-callout-platform"><%= p.name %></div><%})} %>');
+
     // list elements
     var listContainer;
     var listHeaderNode;
@@ -70,9 +76,27 @@ define(function (require, exports, module) {
     var platformLabel;
     var gameListScrollView;
     var platformLabelContainer;
+    var releasedLabel;
+    var gameCallout;
+    var gameCalloutTitle;
+    var gameCalloutPlatforms;
+    var gameCalloutImage;
+    var gameCalloutInfoButton;
+    var gameCalloutText;
+    var gameCalloutInfoCloseButton;
+    var gameViewLock = false;
+    var gameViewLockRow;
 
+    // state values
+    var sortKey = 'name';
+    var reverseSort = false;
     var hoverQueue = {};
     var totalGames = 0;
+    var foundGames = [];
+    var mainContext = Engine.createContext();
+
+    mainContext.setPerspective(500);
+    var platform = null;
 
     function showPlatformDialog() {
         var tiles = gamePlatformTiles();
@@ -110,10 +134,12 @@ define(function (require, exports, module) {
 
     function hoverClasses(target, ifOverClasses, ifOutClasses, key) {
         target.on('mouseover', function () {
-            target.setClasses(ifOverClasses);
+            var over = _.isFunction(ifOverClasses) ? ifOverClasses() : ifOverClasses;
+            var out = _.isFunction(ifOutClasses) ? ifOutClasses() : ifOutClasses;
+            target.setClasses(over);
             if (key) {
                 if (hoverQueue[key]) {
-                    hoverQueue[key].setClasses(ifOutClasses || []);
+                    hoverQueue[key].setClasses(out || []);
                     delete hoverQueue[key];
                 }
                 hoverQueue[key] = target;
@@ -121,17 +147,17 @@ define(function (require, exports, module) {
         });
 
         target.on('mouseout', function () {
-            target.setClasses(ifOutClasses || []);
+            var over = _.isFunction(ifOverClasses) ? ifOverClasses() : ifOverClasses;
+            var out = _.isFunction(ifOutClasses) ? ifOutClasses() : ifOutClasses;
+            target.setClasses(out || []);
             if (key && hoverQueue[key] === target) {
                 delete hoverQueue[key];
             }
         });
     }
 
-    var _statusTemplate = _.template('<%= found %> of <%= results %> retrieved <% if (active != found ){ %>(<%= active %> filtered records shown)<% } %>');
-
     function updateStatus(data, activeGameSet) {
-        if (data){
+        if (data) {
             totalGames = data.number_of_total_results;
         }
         var status = { results: totalGames};
@@ -147,6 +173,20 @@ define(function (require, exports, module) {
         gameListScrollView.sequenceFrom(resultViews);
 
         updateStatus(data, activeGames);
+    }
+
+    function remainingWidth() {
+        var args = _.toArray(arguments);
+        return Math.max(0, _.reduce(args, function (o, a) {
+            return o - a;
+        }, window.innerWidth));
+    }
+
+    function remainingHeight() {
+        var args = _.toArray(arguments);
+        return Math.max(0, _.reduce(args, function (o, a) {
+            return o - a;
+        }, window.innerHeight));
     }
 
     function updateGameList(text) {
@@ -211,8 +251,159 @@ define(function (require, exports, module) {
 
     }
 
-    function highlightGame() {
+    function calloutSize(scale) {
+        if (!scale) {
+            scale = 1;
+        }
+        var height = remainingHeight(HEADER_HEIGHT, ENTRY_HEIGHT, GAME_HEADER_HEIGHT, FOOTER_HEIGHT);
 
+        return [scale * 0.65 * height,
+                scale * height    ];
+    }
+
+    function initCallout() {
+
+        gameCallout = new ContainerSurface({
+            size: calloutSize()
+        });
+
+        gameCallout.add(new Surface({
+            classes: ['game-callout-back']
+        }));
+
+        gameCalloutTitle = new Surface({
+            classes: ['game-callout-header'],
+            size: [undefined, 150]
+        });
+
+        gameCallout.add(new Modifier({transform: Transform.translate(0, 0, 20)}))
+            .add(gameCalloutTitle);
+
+        gameCalloutImage = new ImageSurface({
+            size: calloutSize(0.8),
+            classes: ['callout-image'],
+            properties: {
+                display: 'none'
+            }
+        });
+
+        gameCalloutPlatforms = new Surface({
+            size: [undefined, 60],
+            classes: ['callout-platform']
+        });
+
+        gameCallout.add(new Modifier({origin: [1, 0.5]})).add(gameCalloutImage);
+
+        gameCallout.add(new Modifier({origin: [0, 1], transform: Transform.translate(0, 0, 20)})).add(gameCalloutPlatforms);
+
+        var calloutPosition = Transform.multiply(Transform.moveThen([-100, 0, CALLOUT_Z], Transform.scale(0.7, 0.7, 0.7)),
+            Transform.rotateY(Math.PI / -6)
+        );
+
+        var calloutPositionNoRotate = Transform.multiply(Transform.moveThen([-120, 0, CALLOUT_Z], Transform.scale(1, 1, 1)),
+            Transform.rotateY(0)
+        );
+
+        var rotateTransitionTransform = new TransitionableTransform();
+        rotateTransitionTransform.setScale([0.7, 0.7, 1]);
+        rotateTransitionTransform.setTranslate([-150, 0, 100]);
+        rotateTransitionTransform.setRotate([0, Math.PI / -8, 0]);
+
+        var calloutModifier = new Modifier({origin: [1, 0],
+            transform: calloutPosition
+        });
+
+        layout.content.add(calloutModifier)
+            .add(gameCallout);
+
+        gameCalloutInfoButton = new Surface({
+            classes: ['button', 'info-button'],
+
+            content: 'Description',
+            size: [130, 40],
+            properties: {
+                display: 'none'
+            }
+        });
+
+        gameCalloutInfoCloseButton = new Surface({
+            classes: ['button', 'info-button'],
+            content: '<span class="callout-info-close-x">&times</span> Close Description',
+            size: [200, 40],
+            properties: {
+                display: 'none'
+            }
+        });
+
+        hoverClasses(gameCalloutInfoCloseButton,
+            ['button', 'info-button', 'hover']
+            , ['button', 'info-button']);
+
+        gameCallout.add(new Modifier({
+            transform: Transform.translate(-10, -20, 20),
+            origin: [1, 1],
+            properties: {
+                display: 'none'
+            }
+        })).add(gameCalloutInfoCloseButton);
+
+        gameCalloutText = new Surface({
+            classes: ['game-callout-text'],
+            properties: {
+                display: "none"
+            }
+        });
+
+        gameCallout.add(new Modifier({transform: Transform.translate(0, 0, 10)}))
+            .add(gameCalloutText);
+
+        gameCalloutInfoButton.on('click', function () {
+            gameCalloutText.setProperties({display: 'block'});
+            gameCalloutInfoCloseButton.setProperties({display: 'block'});
+            calloutModifier.setTransform(calloutPositionNoRotate, {duration: 500, curve: "easeInOut" });
+            gameCalloutPlatforms.setProperties({display: 'none'});
+
+        });
+
+        gameCalloutInfoCloseButton.on('click', function () {
+            gameCalloutText.setProperties({display: 'none'});
+            gameCalloutInfoCloseButton.setProperties({display: 'none'});
+            calloutModifier.setTransform(calloutPosition, {duration: 500, curve: "easeInOut" });
+            gameCalloutPlatforms.setProperties({display: 'block'});
+        });
+
+        hoverClasses(gameCalloutInfoButton, ['button', 'info-button', 'hover']
+            , ['button', 'info-button']);
+
+        gameCallout.add(new Modifier({
+            transform: Transform.translate(-10, -70),
+            origin: [1, 1],
+            properties: {
+                display: 'none'
+            }
+        })).add(gameCalloutInfoButton);
+    }
+
+    function highlightGame(game) {
+
+        if (gameViewLock) {
+            game = gameViewLock;
+        }
+        if (game) {
+            gameCalloutTitle.setContent(_gameHeader(game));
+            if (game.image) {
+                gameCalloutImage.setContent(game.image.medium_url);
+                gameCalloutImage.setProperties({display: 'block'});
+            } else {
+                gameCalloutImage.setProperties({display: 'none'});
+            }
+
+            gameCalloutInfoButton.setProperties({display: 'block'});
+
+            gameCalloutPlatforms.setContent(_calloutPlatformsTemplate(game));
+
+            gameCalloutText.setContent(game.description);
+        }
     }
 
     function setSearchPlatform(p) {
@@ -288,7 +479,37 @@ define(function (require, exports, module) {
             classes: ['game-row']
         });
 
-        hoverClasses(gameRowContainer, ['game-row', 'hover'], ['game-row']);
+        hoverClasses(gameRowContainer, function () {
+            if (gameViewLock && gameViewLock.id == game.id) {
+                return ['game-row', 'hover', 'lock'];
+            } else {
+                return ['game-row', 'hover'];
+            }
+        }, function () {
+            if (gameViewLock && gameViewLock.id == game.id) {
+                return ['game-row', 'lock'];
+            } else {
+                return ['game-row'];
+            }
+        });
+
+        gameRowContainer.on('mouseover', function () {
+            highlightGame(game);
+        });
+
+        gameRowContainer.on('click', function () {
+
+            if (gameViewLockRow) {
+                gameViewLockRow.setClasses(['game-row']);
+            }
+            if (gameViewLock && (gameViewLock.id == game.id)) {
+                gameViewLock = null;
+                gameViewLockRow = null;
+            } else {
+                gameViewLock = game;
+                gameViewLockRow = gameRowContainer;
+            }
+        });
 
         var platformSurface = new Surface({
             size: [GAME_ROW_ITEM_PLATFORM_WIDTH, GAME_ROW_ITEM_HEIGHT],
@@ -461,7 +682,7 @@ define(function (require, exports, module) {
         platformLabelContainer.add(new Modifier({origin: [0, 0.5]}))
             .add(platformSortButton);
 
-        var releasedLabel = new Surface({
+        releasedLabel = new Surface({
             size: [GAME_ROW_ITEM_DATE_WIDTH, GAME_HEADER_LABEL_HEIGHT],
             classes: ['game-header-label'],
             content: 'Released',
@@ -494,12 +715,12 @@ define(function (require, exports, module) {
         }
     });
 
-    var layout = new HeaderFooterLayout({
-        headerSize: 100,
+    layout = new HeaderFooterLayout({
+        headerSize: HEADER_HEIGHT,
         footerSize: 50
     });
 
-    var inputSurface = new Surface({
+    inputSurface = new Surface({
         content: '<input id="search-input" class="search" type="text" />',
         size: [SEARCH_INPUT_SIZE, 25]
     });
@@ -519,10 +740,7 @@ define(function (require, exports, module) {
         content: "<p>Welcome to GameGalaxy: a GiantBomb data explorer</p>" +
             "<p>Type a phrase in the field above to begin</p>",
         classes: ["main"],
-        properties: {
-            lineHeight: window.innerHeight - 150 + 'px',
-            textAlign: "center"
-        }
+        origin: [0, 0.5]
     });
 
     layout.content.add(main);
@@ -557,6 +775,10 @@ define(function (require, exports, module) {
     initListContainer();
 
     sizeEntrySurface();
+
+    highlightGame();
+
+    initCallout();
 
     mainContext.emit('game filter update');
 })

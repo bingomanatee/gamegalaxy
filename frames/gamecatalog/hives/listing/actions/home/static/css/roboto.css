@@ -1,0 +1,12 @@
+@font-face {
+    font-family: 'Roboto Condensed';
+    font-style: normal;
+    font-weight: 400;
+    src: local('Roboto Condensed Regular'), local('RobotoCondensed-Regular'), url(/css/home/robotocondensed/Zd2E9abXLFGSr9G3YK2MsNxB8OB85xaNTJvVSB9YUjQ.woff) format('woff');
+}
+@font-face {
+    font-family: 'Roboto Condensed';
+    font-style: normal;
+    font-weight: 700;
+    src: local('Roboto Condensed Bold'), local('RobotoCondensed-Bold'), url(/css/home/robotocondensed/b9QBgL0iMZfDSpmcXcE8nPZRQUbYfRc-1FWT9T9EE8M.woff) format('woff');
+}
