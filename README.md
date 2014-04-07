@@ -37,5 +37,5 @@ some games
 
 ## Related notes
 
-* The Node.js framework I use to manage the app is of my own creation -- see [http://wonderlandlabs.com/blog_folder/hive_mvc](My blog) for details
+* The Node.js framework I use to manage the app is of my own creation -- see [My blog](http://wonderlandlabs.com/blog_folder/hive_mvc) for details
 * The application proxies the giantbomb database to avoid cross platform issues and ultimately to cache results for faster throughput
