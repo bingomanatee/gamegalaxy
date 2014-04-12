@@ -27,6 +27,8 @@ define(function (require, exports, module) {
 
     // sizing context
     var ENTRY_MARGIN = 20;
+    var ENTRY_LABEL_SIZE = 160;
+    var ENTRY_ROW_HEIGHT = 35;
     var ENTRY_HEIGHT = 70;
     var HEADER_HEIGHT = 80;
     var FOOTER_HEIGHT = 50;
@@ -45,15 +47,18 @@ define(function (require, exports, module) {
     var CALLOUT_Z = 0;
 
     // platform
-    var PLATFORM_HEADER_HEIGHT = 50;
+    var PLATFORM_COLUMNS = 6;
+    var PLATFORM_HEIGHT = 50;
+    var PLATFORM_EXTRA = 50;
+    var ENTRY_SEARCH_BUTTON_WIDTH = 100;
+    var PLATFORM_HEADER_HEIGHT = PLATFORM_HEIGHT + (2 * 30);
+    var PLATFORM_DIALOG_WIDTH = 800;
+    var PLATFORM_MARGIN = 15;
+    var CALLOUT_RATIO = 1.6;
+    var PLATFORM_INNER_WIDTH = PLATFORM_DIALOG_WIDTH - PLATFORM_MARGIN * 2;
     var platformDialogContainer;
     var platformGridContainer;
-
-    var entrySurface;
-    var filterLabelSurface;
-
-    var searchChangeDelay;
-    var searchEdition = 0;
+    var platformParent;
 
     // core elements
     var layout;
@@ -88,42 +93,74 @@ define(function (require, exports, module) {
     var gameViewLockRow;
 
     // state values
+    var searchChangeDelay;
+    var entrySurface;
+    var searchEdition = 0;
     var sortKey = 'name';
     var reverseSort = false;
     var hoverQueue = {};
     var totalGames = 0;
     var foundGames = [];
-    var mainContext = Engine.createContext();
 
-    mainContext.setPerspective(500);
+    //main elements
+    var mainContext = Engine.createContext();
+    var footerSurface;
+    var mainContentNode;
+    var mainSurface;
+    var filterLabelSurface;
+
+    mainContext.setPerspective(800);
     var platform = null;
 
     function showPlatformDialog() {
         var tiles = gamePlatformTiles();
-        if (!platformDialogContainer) {
-            platformDialogContainer = new ContainerSurface({
-                size: [800, 700],
-                classes: ['dialog-frame']
-            });
-            platformDialogContainer.add(new Surface({
-                content: '<h2>Platforms</h2>',
-                classes: ['dialog']
-            }));
-            mainContentNode.add(new Modifier({origin: [0.5, 0.5]})).add(platformDialogContainer);
+        if (tiles && tiles.length) {
 
-            platformGridContainer = new GridLayout({
-                dimensions: [6, 8],
-                size: [600, 550]
+            var rows = Math.ceil(tiles.length / PLATFORM_COLUMNS);
+            var total_row_height = (rows * PLATFORM_HEIGHT);
+            var innerWidth = PLATFORM_DIALOG_WIDTH - (2 * PLATFORM_MARGIN);
+
+            platformDialogContainer = new ContainerSurface({
+                size: [PLATFORM_DIALOG_WIDTH, total_row_height + PLATFORM_EXTRA + (2 * PLATFORM_MARGIN)],
+                classes: ['dialog-frame', 'platform-dialog']
             });
+
+            var innerDialogContent = new ContainerSurface({
+                size: [PLATFORM_INNER_WIDTH, PLATFORM_EXTRA + total_row_height],
+                classes: ['platform-inner-dialog']
+            });
+            innerDialogContent.add(new Surface({
+                content: '<h2>Platforms</h2>',
+                classes: ['inner-dialog-text']
+            }));
 
             platformDialogContainer.add(new Modifier({
-                transform: Transform.translate(0, PLATFORM_HEADER_HEIGHT)
-            })).add(platformGridContainer);
-        } else {
-            platformDialogContainer.setProperties({display: 'block'});
-        }
+                transform: Transform.translate(PLATFORM_MARGIN, PLATFORM_MARGIN, 0),
+                origin: [0, 0]
+            }))
+                .add(innerDialogContent);
 
-        platformGridContainer.sequenceFrom(tiles);
+            if (platformParent) {
+                platformParent._child = platformParent._object = null;
+                platformParent._isRenderable = false;
+                platformParent._isModifier = false;
+            }
+
+            platformParent = mainContentNode.add(new Modifier({origin: [0.5, 0.5]}));
+            platformParent.add(platformDialogContainer);
+
+            platformGridContainer = new GridLayout({
+                dimensions: [PLATFORM_COLUMNS, rows],
+                cellSize: [innerWidth / PLATFORM_COLUMNS, 80]
+            });
+            platformGridContainer.sequenceFrom(tiles);
+
+            innerDialogContent.add(new Modifier({
+                transform: Transform.translate(0, PLATFORM_EXTRA),
+                origin: [0, 0],
+                size: [innerWidth, rows * PLATFORM_HEIGHT]
+            })).add(platformGridContainer);
+        }
     }
 
     function platformNames(game) {
@@ -192,13 +229,13 @@ define(function (require, exports, module) {
     function updateGameList(text) {
         searchChangeDelay = null;
         platform = null;
-        main.setContent('<p>Searching for &quot;' + text + '&quot; -- please wait</p>');
+        mainSurface.setContent('<p>Searching for &quot;' + text + '&quot; -- please wait</p>');
         console.log('clearing foundGames');
         foundGames = [];
         var thisSearch = ++searchEdition;
 
         giantbomb.games({filter: 'name:' + encodeURIComponent(text)}, function (data) {
-            main.setContent('');
+            mainSurface.setContent('');
             mainContext.emit('game filter update');
             if (searchEdition == thisSearch) {
                 console.log('games containing', text, ':', data);
@@ -251,8 +288,6 @@ define(function (require, exports, module) {
 
     }
 
-    var CALLOUT_RATIO = 1.6;
-
     function calloutSize(scale) {
         if (!scale) {
             scale = 1;
@@ -270,7 +305,7 @@ define(function (require, exports, module) {
     }
 
     function initCallout() {
-
+        console.log('init callout');
         gameCallout = new ContainerSurface({
             size: calloutSize()
         });
@@ -280,9 +315,10 @@ define(function (require, exports, module) {
         })).add(gameCallout);
 
         var gameCalloutNode = new RenderNode();
-        var transformCallout = Transform.translate(0,0,0);
+        //   var transformCallout = Transform.thenMove(Transform.rotateY(Math.PI/-4), [100,0,0]);
         var gameCalloutModifier = new Modifier({
-            transform: transformCallout
+            //  transform: transformCallout,
+            origin: [0, 0]
         });
 
         gameCallout.add(gameCalloutModifier).add(gameCalloutNode);
@@ -315,47 +351,47 @@ define(function (require, exports, module) {
         gameCalloutNode.add(new Modifier({origin: [0, 1]})).add(gameCalloutPlatforms);
 
         gameCalloutInfoButton = new Surface({
-            classes: ['button', 'info-button', 'info-close-button'],
-
-            content: 'Description',
-            size: [130, 40]
+            content: '<button class="button info-button info-close-button description-button">Description</button>',
+            size: [130, 40], properties: {
+                display: 'none'
+            }
+        });
+        gameCalloutInfoButton.on('deploy', function () {
+            var element = this._currTarget.getElementsByClassName('description-button')[0];
+            element.addEventListener('click', function () {
+                gameCalloutText.setProperties({display: 'block'});
+                gameCalloutInfoCloseButton.setProperties({display: 'block'});
+                gameCalloutPlatforms.setProperties({display: 'none'});
+                gameCalloutInfoButton.setProperties({display: 'none'});
+            });
         });
 
         gameCalloutInfoCloseButton = new Surface({
-            classes: ['button', 'info-button'],
-            content: '<span class="callout-info-close-x">&times</span> Close Description',
-            size: [200, 40]
+            content: '<button class="button info-button close-button"><span class="callout-info-close-x">&times</span> Close Description</button>',
+            size: [200, 30], properties: {
+                display: 'none'
+            }
         });
+        gameCalloutInfoCloseButton.on('deploy', function () {
 
-        hoverClasses(gameCalloutInfoCloseButton,
-            ['button', 'info-button', 'hover']
-            , ['button', 'info-button']);
-
-
-
-        gameCalloutInfoButton.on('click', function () {
-            gameCalloutText.setProperties({display: 'block'});
-            gameCalloutInfoCloseButton.setProperties({display: 'block'});
-            gameCalloutPlatforms.setProperties({display: 'none'});
-
+            var element = this._currTarget.getElementsByClassName('close-button')[0];
+            element.addEventListener('click', function () {
+                gameCalloutText.setProperties({display: 'none'});
+                gameCalloutInfoCloseButton.setProperties({display: 'none'});
+                gameCalloutPlatforms.setProperties({display: 'block'});
+                gameCalloutInfoButton.setProperties({display: 'block'});
+            })
         });
-
-        gameCalloutInfoCloseButton.on('click', function () {
-            gameCalloutText.setProperties({display: 'none'});
-            gameCalloutInfoCloseButton.setProperties({display: 'none'});
-            gameCalloutPlatforms.setProperties({display: 'block'});
-        });
-
-        hoverClasses(gameCalloutInfoButton, ['button', 'info-button', 'hover']
-            , ['button', 'info-button']);
 
         gameCalloutNode.add(new Modifier({
             origin: [1, 1]
         })).add(gameCalloutInfoButton);
 
-
         gameCalloutNode.add(new Modifier({
-            origin: [1, 1]
+            size: [200, 50],
+            origin: [1, 1], properties: {
+                display: 'none'
+            }
         })).add(gameCalloutInfoCloseButton);
 
         gameCalloutTitle = new Surface({
@@ -366,6 +402,7 @@ define(function (require, exports, module) {
         gameCalloutNode.add(new Modifier({size: [undefined, 150]})).add(gameCalloutTitle);
     }
 
+    var firstLoad = true;
     function highlightGame(game) {
 
         if (gameViewLock) {
@@ -380,8 +417,10 @@ define(function (require, exports, module) {
                 gameCalloutImage.setProperties({display: 'none'});
             }
 
-            gameCalloutInfoButton.setProperties({display: 'block'});
-
+            if (firstLoad){
+                gameCalloutInfoButton.setProperties({display: 'block'});
+                firstLoad = false;
+            }
             gameCalloutPlatforms.setContent(_calloutPlatformsTemplate(game));
 
             gameCalloutText.setContent(game.description);
@@ -523,7 +562,7 @@ define(function (require, exports, module) {
     }
 
     function sizeEntrySurface() {
-        var size = [window.innerWidth - 2 * ENTRY_MARGIN, 50];
+        var size = [remainingWidth(2 * ENTRY_MARGIN), 50];
         entrySurface.setSize(size);
         listContainer.setSize([undefined, getListHeight()]);
     }
@@ -551,12 +590,12 @@ define(function (require, exports, module) {
             .add(new Surface({
                 content: 'Search for games:',
                 classes: ['label'],
-                size: [SEARCH_LABEL_SIZE, 25]
+                size: [SEARCH_LABEL_SIZE, ENTRY_ROW_HEIGHT]
             }));
 
         filterLabelSurface = new Surface({
             content: 'filter text',
-            size: [350, 25],
+            size: [remainingWidth(ENTRY_LABEL_SIZE, ENTRY_SEARCH_BUTTON_WIDTH, 2 * ENTRY_MARGIN), ENTRY_ROW_HEIGHT],
             classes: ['filter-label']
         });
         filterLabelSurface.on('deploy', function () {
@@ -570,11 +609,23 @@ define(function (require, exports, module) {
 
         entrySurface.add(new Modifier({
             origin: [0, 0.5],
-            transform: Transform.translate(SEARCH_LABEL_SIZE + SEARCH_INPUT_SIZE, 0)
+            transform: Transform.translate(SEARCH_LABEL_SIZE + SEARCH_INPUT_SIZE + ENTRY_SEARCH_BUTTON_WIDTH, 0)
         })).add(filterLabelSurface);
 
-        inputSurface.on('deploy', function () {
-            document.getElementById('search-input').addEventListener('keyup', function () {
+        inputSurface = new Surface({
+            content: '<input type="search" id="search-input" class="search" type="text" />',
+            classes: ['search-input-div'],
+            size: [SEARCH_INPUT_SIZE, 25]
+        });
+
+        var searchButton = new Surface({
+            content: '<button class="search-button" id="search-button">List</button>',
+            size: [ENTRY_SEARCH_BUTTON_WIDTH, 25]
+        });
+
+        searchButton.on('deploy', function () {
+            document.getElementById('search-button').addEventListener('click', function () {
+                filterLabelSurface.setContent("Loading results --- please wait");
                 var text = document.getElementById('search-input').value;
                 console.log('text:', text);
 
@@ -590,10 +641,16 @@ define(function (require, exports, module) {
 
         entrySurface.add(new Modifier({
             origin: [0, 0.33],
-            transform: Transform.translate(160, 0)}))
+            transform: Transform.translate(ENTRY_LABEL_SIZE, 0)}))
             .add(inputSurface);
 
-        mainContentNode.add(new Modifier({transform: Transform.translate(ENTRY_MARGIN, ENTRY_MARGIN)}))
+        entrySurface.add(new Modifier({
+            origin: [0, 0.33],
+            transform: Transform.translate(ENTRY_LABEL_SIZE + SEARCH_INPUT_SIZE, 0)
+        })).add(searchButton);
+
+        mainContentNode.add(new Modifier({
+            transform: Transform.translate(ENTRY_MARGIN, ENTRY_MARGIN)}))
             .add(entryNode);
     }
 
@@ -687,70 +744,68 @@ define(function (require, exports, module) {
             .add(releasedLabel);
     }
 
-    mainContext.on('game filter update', function () {
-        if (!filterLabelSurface) {
-            return;
-        }
-        filterLabelSurface.setContent(_filterText({platform: platform}));
-        if (foundGames.length && gameListScrollView) {
-            renderGames(null)
-        }
-    });
+    function initLayout() {
+        mainContext.on('game filter update', function () {
+            if (!filterLabelSurface) {
+                return;
+            }
+            filterLabelSurface.setContent(_filterText({platform: platform}));
+            if (foundGames.length && gameListScrollView) {
+                renderGames(null)
+            }
+        });
 
-    layout = new HeaderFooterLayout({
-        headerSize: HEADER_HEIGHT,
-        footerSize: 50
-    });
+        layout = new HeaderFooterLayout({
+            headerSize: HEADER_HEIGHT,
+            footerSize: 50
+        });
 
-    inputSurface = new Surface({
-        content: '<input id="search-input" class="search" type="text" />',
-        size: [SEARCH_INPUT_SIZE, 25]
-    });
+        layout.header.add(new Surface({
+            size: [undefined, HEADER_HEIGHT],
+            content: "<h1>GameGalaxy</h1>",
+            classes: ["header"],
+            properties: {
+                lineHeight: "100px",
+                textAlign: "center"
+            }
+        }));
 
-    layout.header.add(new Surface({
-        size: [undefined, HEADER_HEIGHT],
-        content: "<h1>GameGalaxy</h1>",
-        classes: ["header"],
-        properties: {
-            lineHeight: "100px",
-            textAlign: "center"
-        }
-    }));
+        mainSurface = new Surface({
+            size: [undefined, undefined],
+            content: "<p>Welcome to GameGalaxy: a GiantBomb data explorer</p>" +
+                "<p>Type a phrase in the field above to begin</p>",
+            classes: ["main"],
+            origin: [0, 0.5]
+        });
 
-    var main = new Surface({
-        size: [undefined, undefined],
-        content: "<p>Welcome to GameGalaxy: a GiantBomb data explorer</p>" +
-            "<p>Type a phrase in the field above to begin</p>",
-        classes: ["main"],
-        origin: [0, 0.5]
-    });
+        layout.content.add(mainSurface);
 
-    layout.content.add(main);
+        mainContentNode = new RenderNode({
+        });
+        mainContentNode.add(new Modifier({
+            translate: Transform.translate(ENTRY_MARGIN, ENTRY_MARGIN),
+            size: [window.innerWidth - 2 * ENTRY_MARGIN, ENTRY_HEIGHT]
+        }));
 
-    var mainContentNode = new RenderNode({
-    });
-    mainContentNode.add(new Modifier({
-        translate: Transform.translate(ENTRY_MARGIN, ENTRY_MARGIN),
-        size: [window.innerWidth - 2 * ENTRY_MARGIN, ENTRY_HEIGHT]
-    }));
+        layout.content.add(mainContentNode);
 
-    layout.content.add(mainContentNode);
+        footerSurface = new Surface({
+            size: [undefined, FOOTER_HEIGHT],
+            content: "enter a search term to begin",
+            classes: ["footer"],
+            properties: {
+                lineHeight: "50px",
+                textAlign: "center"
+            }
+        });
+        layout.footer.add(footerSurface);
 
-    var footerSurface = new Surface({
-        size: [undefined, FOOTER_HEIGHT],
-        content: "enter a search term to begin",
-        classes: ["footer"],
-        properties: {
-            lineHeight: "50px",
-            textAlign: "center"
-        }
-    });
+        mainContext.add(layout);
 
-    layout.footer.add(footerSurface);
+        mainContext.on('resize', sizeEntrySurface);
+    }
 
-    mainContext.add(layout);
-
-    mainContext.on('resize', sizeEntrySurface);
+    initLayout();
 
     initSearchBar();
 

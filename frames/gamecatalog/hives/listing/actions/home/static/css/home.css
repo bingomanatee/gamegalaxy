@@ -106,6 +106,8 @@
 }
 
 .button {
+    -webkit-appearance: none;
+    border: none;
     -webkit-border-radius: 4px 4px 4px 4px;
     border-radius: 4px 4px 4px 4px;
 }
@@ -119,10 +121,9 @@
     padding-bottom: 100px;
 }
 .info-button {
-    display: none;
     color: white;
     font-family: 'Roboto Condensed', Helvetica Neue, Arial, sans-serif;
-    padding: 3px 6px;
+    padding: 2px 10px;
     font-size: 120%;
     background: rgb(240, 183, 161); /* Old browsers */
     background: -moz-linear-gradient(top, rgba(240, 183, 161, 1) 0%, rgba(140, 51, 16, 1) 50%, rgba(117, 34, 1, 1) 51%, rgba(191, 110, 78, 1) 100%); /* FF3.6+ */
@@ -151,6 +152,11 @@
 
 }
 
+.game-callout-text a {
+    color: black;
+    text-decoration: none;
+}
+
 .entry-frame {
     background-color: rgb(245, 245, 245)
 }
@@ -159,11 +165,17 @@
     font-weight: bold;
 }
 
+.search-input-div {
+    padding-right: 1em;
+}
 #search-input {
-
     font-size: 100%;
-    padding: 0.25em;
-    width: 300px;
+    padding: 0.5em;
+    width: 100%;
+}
+
+.search-button {
+    font-size: 100%;
 }
 
 .filter-label {
@@ -180,7 +192,6 @@
 
 .dialog-frame {
     background-color: #149bdf;
-    padding: 1.5em;
     -webkit-box-shadow: 25px 29px 31px 0px rgba(0, 0, 0, 0.27);
     -moz-box-shadow: 25px 29px 31px 0px rgba(0, 0, 0, 0.27);
     box-shadow: 25px 29px 31px 0px rgba(0, 0, 0, 0.27);
