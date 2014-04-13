@@ -12,15 +12,20 @@ define(function(require, exports, module) {
 
     /**
      * Creates a famous surface containing video content. Currently adding
-     * controls and manipulating the video are not supported through the
-     * surface interface, but can be accomplished via standard javascript
-     * manipulation of the video DOM element.
+     *   controls and manipulating the video are not supported through the
+     *   surface interface, but can be accomplished via standard JavaScript
+     *   manipulation of the video DOM element.
+     *   This extends the Surface class.
      *
      * @class VideoSurface
-     *
-     * @name VideoSurface
      * @extends Surface
      * @constructor
+     * @param {Object} [options] default option overrides
+     * @param {Array.Number} [options.size] [width, height] in pixels
+     * @param {Array.string} [options.classes] CSS classes to set on inner content
+     * @param {Array} [options.properties] string dictionary of HTML attributes to set on target div
+     * @param {string} [options.content] inner (HTML) content of surface
+     * @param {boolean} [options.autoplay] autoplay
      */
     function VideoSurface(options) {
         this._videoUrl = undefined;
@@ -40,37 +45,55 @@ define(function(require, exports, module) {
     VideoSurface.prototype.elementClass = 'famous-surface';
 
     /**
+     * Set internal options, overriding any default options
+     *
      * @method setOptions
+     *
+     * @param {Object} [options] overrides of default options
+     * @param {Boolean} [options.autoplay] HTML autoplay
      */
-    VideoSurface.prototype.setOptions = function(options) {
+    VideoSurface.prototype.setOptions = function setOptions(options) {
         for (var key in VideoSurface.DEFAULT_OPTIONS) {
-            if(options[key] !== undefined) this.options[key] = options[key];
+            if (options[key] !== undefined) this.options[key] = options[key];
         }
     };
 
     /**
+     * Set url of the video.
+     *
      * @method setContent
+     * @param {string} videoUrl URL
      */
-    VideoSurface.prototype.setContent = function(videoUrl) {
+    VideoSurface.prototype.setContent = function setContent(videoUrl) {
         this._videoUrl = videoUrl;
         this._contentDirty = true;
     };
 
     /**
+     * Place the document element this component manages into the document.
+     *   Note: In the case of VideoSurface, simply changes the options on the target.
+     *
+     * @private
      * @method deploy
+     * @param {Node} target document parent of this container
      */
-    VideoSurface.prototype.deploy = function(target) {
+    VideoSurface.prototype.deploy = function deploy(target) {
         target.src = this._videoUrl;
         target.autoplay = this.options.autoplay;
     };
 
     /**
+     * Remove this component and contained content from the document.
+     *   Note: This doesn't actually remove the <video> element from the
+     *   document.
+     * @private
      * @method recall
+     *
+     * @param {Node} target node to which the component was deployed
      */
-    VideoSurface.prototype.recall = function(target) {
+    VideoSurface.prototype.recall = function recall(target) {
         target.src = '';
     };
 
     module.exports = VideoSurface;
 });
-

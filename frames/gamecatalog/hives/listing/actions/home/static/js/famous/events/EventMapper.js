@@ -12,13 +12,13 @@ define(function(require, exports, module) {
 
     /**
      * EventMapper routes events to various event destinations
-     *  based on custom logic.
+     *  based on custom logic.  The function signature is arbitrary.
      *
      * @class EventMapper
      * @constructor
      *
-     * @param {function} mapping function to determine where
-     *  events are routed to
+     * @param {function} mappingFunction function to determine where
+     *  events are routed to.
      */
     function EventMapper(mappingFunction) {
         EventHandler.call(this);
@@ -31,27 +31,23 @@ define(function(require, exports, module) {
     EventMapper.prototype.unsubscribe = null;
 
     /**
-     * Emit determines where to send events based on the return
-     *  value of it's mapping function when passed the event
-     *  type and associated data.
+     * Trigger an event, sending to all mapped downstream handlers
+     *   listening for provided 'type' key.
      *
      * @method emit
-     * @param {string} type name of the event
-     * @param {object} data associated data
+     *
+     * @param {string} type event type key (for example, 'click')
+     * @param {Object} data event data
+     * @return {EventHandler} this
      */
-    EventMapper.prototype.emit = function(type, data) {
+    EventMapper.prototype.emit = function emit(type, data) {
         var target = this._mappingFunction.apply(this, arguments);
-        if(target && (target.emit instanceof Function)) target.emit(type, data);
+        if (target && (target.emit instanceof Function)) target.emit(type, data);
     };
 
     /**
-     * An alias of emit. Trigger determines where to send events
-     *  based on the return value of it's mapping function when
-     *  passed the event type and associated data.
-     *
+     * Alias of emit.
      * @method trigger
-     * @param {string} type name of the event
-     * @param {object} data associated data
      */
     EventMapper.prototype.trigger = EventMapper.prototype.emit;
 

@@ -31,12 +31,12 @@ define(function(require, exports, module) {
     EventHandler.prototype.constructor = EventHandler;
 
     /**
-     * Assign an event handler to receive an object's events.
+     * Assign an event handler to receive an object's input events.
      *
      * @method setInputHandler
      * @static
      *
-     * @param {Object} object object to mix in emit function
+     * @param {Object} object object to mix trigger, subscribe, and unsubscribe functions into
      * @param {EventHandler} handler assigned event handler
      */
     EventHandler.setInputHandler = function setInputHandler(object, handler) {
@@ -48,13 +48,13 @@ define(function(require, exports, module) {
     };
 
     /**
-     * Send event data to downstream handlers responding to this event type.
+     * Assign an event handler to receive an object's output events.
      *
      * @method setOutputHandler
+     * @static
      *
-     * @param {string} type event type key (for example, 'click')
-     * @param {Object} event received event data
-     * @return {EventHandler} this
+     * @param {Object} object object to mix pipe, unpipe, on, addListener, and removeListener functions into
+     * @param {EventHandler} handler assigned event handler
      */
     EventHandler.setOutputHandler = function setOutputHandler(object, handler) {
         if (handler instanceof EventHandler) handler.bindThis(object);
@@ -65,10 +65,9 @@ define(function(require, exports, module) {
         object.removeListener = handler.removeListener.bind(handler);
     };
 
-
     /**
      * Trigger an event, sending to all downstream handlers
-     *   matching provided 'type' key.
+     *   listening for provided 'type' key.
      *
      * @method emit
      *
@@ -89,17 +88,17 @@ define(function(require, exports, module) {
     };
 
     /**
-     * Alias for {@link emit}
+     * Alias for emit
      * @method addListener
      */
     EventHandler.prototype.trigger = EventHandler.prototype.emit;
 
     /**
-     * Add handler object to set of downstream handlers.
+     * Add event handler object to set of downstream handlers.
      *
      * @method pipe
      *
-     * @param {EventHandler} target target emitter object
+     * @param {EventHandler} target event handler target object
      * @return {EventHandler} passed event handler
      */
     EventHandler.prototype.pipe = function pipe(target) {
@@ -117,12 +116,12 @@ define(function(require, exports, module) {
 
     /**
      * Remove handler object from set of downstream handlers.
-     * Undoes work of "pipe"
+     *   Undoes work of "pipe".
      *
      * @method unpipe
      *
-     * @param {EventHandler} target target emitter object
-     * @return {EventHanlder} provided target
+     * @param {EventHandler} target target handler object
+     * @return {EventHandler} provided target
      */
     EventHandler.prototype.unpipe = function unpipe(target) {
         if (target.unsubscribe instanceof Function) return target.unsubscribe(this);
@@ -139,9 +138,9 @@ define(function(require, exports, module) {
     };
 
     /**
-     * Bind a handler function to an event type handled by this object.
+     * Bind a callback function to an event type handled by this object.
      *
-     * @method on&nbsp;
+     * @method "on"
      *
      * @param {string} type event type key (for example, 'click')
      * @param {function(string, Object)} handler callback
@@ -160,14 +159,13 @@ define(function(require, exports, module) {
     };
 
     /**
-     * Alias for "on()"
+     * Alias for "on"
      * @method addListener
      */
-
     EventHandler.prototype.addListener = EventHandler.prototype.on;
 
     /**
-     * Automatically listen to events from an upstream event handler
+     * Listen for events from an upstream event handler.
      *
      * @method subscribe
      *
@@ -186,7 +184,7 @@ define(function(require, exports, module) {
     };
 
     /**
-     * Stop listening to events from an upstream event handler
+     * Stop listening to events from an upstream event handler.
      *
      * @method unsubscribe
      *

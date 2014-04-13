@@ -9,21 +9,22 @@
 
 define(function(require, exports, module) {
     /**
-     *  A singleton that maintains a global registry of rendered surfaces.
-     *   (This should only be used by the internal engine.)
+     * A singleton that maintains a global registry of Surfaces.
+     *   Private.
+     *
      * @private
      * @static
-     * @namespace Entity
+     * @class Entity
      */
 
     var entities = [];
 
     /**
-     * Get entity from global index
+     * Get entity from global index.
      *
      * @private
      * @method get
-     * @param {Number} entity reigstration id
+     * @param {Number} id entity reigstration id
      * @return {Surface} entity in the global index
      */
     function get(id) {
@@ -35,7 +36,7 @@ define(function(require, exports, module) {
      *
      * @private
      * @method set
-     * @param {Number} entity reigstration id
+     * @param {Number} id entity reigstration id
      * @return {Surface} entity to add to the global index
      */
     function set(id, entity) {
@@ -61,7 +62,7 @@ define(function(require, exports, module) {
      *
      * @private
      * @method unregister
-     * @param {Number} entity reigstration id
+     * @param {Number} id entity reigstration id
      */
     function unregister(id) {
         set(id, null);

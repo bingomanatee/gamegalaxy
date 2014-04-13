@@ -14,7 +14,7 @@ define(function(require, exports, module) {
 
     /**
      * Builds and renders a scene graph based on a declarative structure definition.
-     * See examples/Scene/example.js.
+     * See the Scene examples in the examples distribution (http://github.com/Famous/examples.git).
      *
      * @class Scene
      * @constructor
@@ -30,93 +30,6 @@ define(function(require, exports, module) {
         if (definition) this.load(definition);
     }
 
-    /**
-     * Clone this scene
-     *
-     * @method create
-     * @return {Scene} deep copy of this scene
-     */
-    Scene.prototype.create = function create() {
-        return new Scene(this._definition);
-    };
-
-    // parse object directly into tree of RenderNodes
-    function _parse(definition) {
-        var result;
-        var id;
-        if (definition instanceof Array) {
-            result = _parseArray.call(this, definition);
-        }
-        else {
-            id = this._objects.length;
-            if (definition.render && (definition.render instanceof Function)) {
-                result = definition;
-            }
-            else if (definition.target) {
-                var targetObj = _parse.call(this, definition.target);
-                var obj = _parseTransform.call(this, definition);
-
-                result = new RenderNode(obj);
-                result.add(targetObj);
-                if (definition.id) this.id[definition.id] = obj;
-            }
-            else if (definition.id) {
-                result = new RenderNode();
-                this.id[definition.id] = result;
-            }
-        }
-        this._objects[id] = result;
-        return result;
-    }
-
-    function _parseArray(definition) {
-        var result = new RenderNode();
-        for (var i = 0; i < definition.length; i++) {
-            var obj = _parse.call(this, definition[i]);
-            if (obj) result.add(obj);
-        }
-        return result;
-    }
-
-    /**
-     * Builds and renders a scene graph based on a canonical declarative scene definition
-     * See examples/Scene/example.js.
-     *
-     * @method load
-     * @param {Object} definition definition in the format of a render spec.
-     */
-    Scene.prototype.load = function load(definition) {
-        this._definition = definition;
-        this.id = {};
-        this._objects = [];
-        this.node.set(_parse.call(this, definition));
-    };
-
-
-    /**
-     * Add renderables to this component's render tree
-     *
-     * @method add
-     *
-     * @param {Object} obj renderable object
-     * @return {RenderNode} Render wrapping provided object, if not already a RenderNode
-     */
-    Scene.prototype.add = function add() {
-        return this.node.add.apply(this.node, arguments);
-    };
-
-
-    /**
-     * Generate a render spec from the contents of this component.
-     *
-     * @private
-     * @method render
-     * @return {number} Render spec for this component
-     */
-    Scene.prototype.render = function render() {
-        return this.node.render.apply(this.node, arguments);
-    };
-
     var _MATRIX_GENERATORS = {
         'translate': Transform.translate,
         'rotate': Transform.rotate,
@@ -129,6 +42,16 @@ define(function(require, exports, module) {
         'matrix3d': function() {
             return arguments;
         }
+    };
+
+    /**
+     * Clone this scene
+     *
+     * @method create
+     * @return {Scene} deep copy of this scene
+     */
+    Scene.prototype.create = function create() {
+        return new Scene(this._definition);
     };
 
     function _resolveTransformMatrix(matrixDefinition) {
@@ -171,6 +94,81 @@ define(function(require, exports, module) {
         });
         return result;
     }
+
+    function _parseArray(definition) {
+        var result = new RenderNode();
+        for (var i = 0; i < definition.length; i++) {
+            var obj = _parse.call(this, definition[i]);
+            if (obj) result.add(obj);
+        }
+        return result;
+    }
+
+    // parse object directly into tree of RenderNodes
+    function _parse(definition) {
+        var result;
+        var id;
+        if (definition instanceof Array) {
+            result = _parseArray.call(this, definition);
+        }
+        else {
+            id = this._objects.length;
+            if (definition.render && (definition.render instanceof Function)) {
+                result = definition;
+            }
+            else if (definition.target) {
+                var targetObj = _parse.call(this, definition.target);
+                var obj = _parseTransform.call(this, definition);
+
+                result = new RenderNode(obj);
+                result.add(targetObj);
+                if (definition.id) this.id[definition.id] = obj;
+            }
+            else if (definition.id) {
+                result = new RenderNode();
+                this.id[definition.id] = result;
+            }
+        }
+        this._objects[id] = result;
+        return result;
+    }
+
+    /**
+     * Builds and renders a scene graph based on a canonical declarative scene definition.
+     * See examples/Scene/example.js.
+     *
+     * @method load
+     * @param {Object} definition definition in the format of a render spec.
+     */
+    Scene.prototype.load = function load(definition) {
+        this._definition = definition;
+        this.id = {};
+        this._objects = [];
+        this.node.set(_parse.call(this, definition));
+    };
+
+    /**
+     * Add renderables to this component's render tree
+     *
+     * @method add
+     *
+     * @param {Object} obj renderable object
+     * @return {RenderNode} Render wrapping provided object, if not already a RenderNode
+     */
+    Scene.prototype.add = function add() {
+        return this.node.add.apply(this.node, arguments);
+    };
+
+    /**
+     * Generate a render spec from the contents of this component.
+     *
+     * @private
+     * @method render
+     * @return {number} Render spec for this component
+     */
+    Scene.prototype.render = function render() {
+        return this.node.render.apply(this.node, arguments);
+    };
 
     module.exports = Scene;
 });

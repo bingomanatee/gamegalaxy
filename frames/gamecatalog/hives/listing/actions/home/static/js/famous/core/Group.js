@@ -13,11 +13,10 @@ define(function(require, exports, module) {
     var Surface = require('./Surface');
 
     /**
-     *  An internal Context designed to contain surfaces and set properties
-     *   to be applied to all of them at once, essentially a sizeless ContainerSurface.
-     *   This is primarily used for specific performance improvements.
-     *
-     *   (This class should only be used by the internal engine.)
+     * A Context designed to contain surfaces and set properties
+     *   to be applied to all of them at once.
+     *   This is primarily used for specific performance improvements in the rendering engine.
+     *   Private.
      *
      * @private
      * @class Group
@@ -42,10 +41,10 @@ define(function(require, exports, module) {
     Group.prototype.elementClass = 'famous-group';
 
     /**
-     * Add renderables to this component's render tree
+     * Add renderables to this component's render tree.
      *
      * @method add
-     *
+     * @private
      * @param {Object} obj renderable object
      * @return {RenderNode} Render wrapping provided object, if not already a RenderNode
      */
@@ -75,7 +74,6 @@ define(function(require, exports, module) {
         this.context.migrate(target);
     };
 
-
     /**
      * Remove this component and contained content from the document
      *
@@ -88,7 +86,6 @@ define(function(require, exports, module) {
         this._container = document.createDocumentFragment();
         this.context.migrate(this._container);
     };
-
 
     /**
      * Apply changes from this component to the corresponding document element.

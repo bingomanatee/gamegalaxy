@@ -22,14 +22,13 @@ define(function(require, exports, module) {
 
     /**
      * The top-level container for a Famous-renderable piece of the document.
-     * It is directly updated by the process-wide Engine object, and manages one
-     * render tree root, which can contain other renderables.
-     *
-     *   (This constructor should only be used by the internal engine.)
+     *   It is directly updated by the process-wide Engine object, and manages one
+     *   render tree root, which can contain other renderables.
      *
      * @class Context
      * @constructor
-     * @param {Node} container Element in which Famo.us content will be inserted
+     * @private
+     * @param {Node} container Element in which content will be inserted
      */
     function Context(container) {
         this.container = container;
@@ -56,13 +55,13 @@ define(function(require, exports, module) {
 
     }
 
-    // TODO: Deprecate this, unused.
+    // Note: Unused
     Context.prototype.getAllocator = function getAllocator() {
         return this._allocator;
     };
 
     /**
-     * Add renderables to this Context's render tree
+     * Add renderables to this Context's render tree.
      *
      * @method add
      *
@@ -74,11 +73,11 @@ define(function(require, exports, module) {
     };
 
     /**
-     * Move this context to another containing document element.
+     * Move this Context to another containing document element.
      *
      * @method migrate
      *
-     * @param {Node} container Element to which Famo.us content will be migrated
+     * @param {Node} container Element to which content will be migrated
      */
     Context.prototype.migrate = function migrate(container) {
         if (container === this.container) return;
@@ -87,7 +86,7 @@ define(function(require, exports, module) {
     };
 
     /**
-     * Gets viewport size for Context
+     * Gets viewport size for Context.
      *
      * @method getSize
      *
@@ -98,7 +97,7 @@ define(function(require, exports, module) {
     };
 
     /**
-     * Sets viewport size for Context
+     * Sets viewport size for Context.
      *
      * @method setSize
      *
@@ -112,7 +111,6 @@ define(function(require, exports, module) {
 
     /**
      * Commit this Context's content changes to the document.
-     *   (This should only be used by the internal engine.)
      *
      * @private
      * @method update
@@ -150,8 +148,8 @@ define(function(require, exports, module) {
      *
      * @method getPerspective
      * @param {Number} perspective in pixels
-     * @param {Object} transition object
-     * @param {function(Object)} function called on completion of transition
+     * @param {Object} [transition] Transitionable object for applying the change
+     * @param {function(Object)} callback function called on completion of transition
      */
     Context.prototype.setPerspective = function setPerspective(perspective, transition, callback) {
         return this._perspectiveState.set(perspective, transition, callback);
@@ -159,22 +157,22 @@ define(function(require, exports, module) {
 
     /**
      * Trigger an event, sending to all downstream handlers
-     *   matching provided 'type' key.
+     *   listening for provided 'type' key.
      *
      * @method emit
      *
      * @param {string} type event type key (for example, 'click')
      * @param {Object} event event data
-     * @return {EventHandler} internal event handler
+     * @return {EventHandler} this
      */
     Context.prototype.emit = function emit(type, event) {
         return this._eventOutput.emit(type, event);
     };
 
     /**
-     * Bind a handler function to an event type handled by this object.
+     * Bind a callback function to an event type handled by this object.
      *
-     * @method on&nbsp;
+     * @method "on"
      *
      * @param {string} type event type key (for example, 'click')
      * @param {function(string, Object)} handler callback
@@ -186,7 +184,7 @@ define(function(require, exports, module) {
 
     /**
      * Unbind an event by type and handler.
-     *   This undoes the work of "on()".
+     *   This undoes the work of "on".
      *
      * @method removeListener
      *
@@ -199,12 +197,12 @@ define(function(require, exports, module) {
     };
 
     /**
-     * Add handler object to set of downstream handlers.
+     * Add event handler object to set of downstream handlers.
      *
      * @method pipe
      *
-     * @param {EventHandler} target downstream event handler
-     * @return {EventHandler} internal event handler object (for chaining)
+     * @param {EventHandler} target event handler target object
+     * @return {EventHandler} passed event handler
      */
     Context.prototype.pipe = function pipe(target) {
         return this._eventOutput.pipe(target);
@@ -212,12 +210,12 @@ define(function(require, exports, module) {
 
     /**
      * Remove handler object from set of downstream handlers.
-     * Undoes work of "pipe"
+     *   Undoes work of "pipe".
      *
      * @method unpipe
      *
-     * @param {EventHandler} target target emitter object
-     * @return {EventHanlder} internal event handler object (for chaining)
+     * @param {EventHandler} target target handler object
+     * @return {EventHandler} provided target
      */
     Context.prototype.unpipe = function unpipe(target) {
         return this._eventOutput.unpipe(target);

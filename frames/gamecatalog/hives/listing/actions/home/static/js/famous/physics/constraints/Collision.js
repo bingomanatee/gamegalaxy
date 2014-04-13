@@ -13,13 +13,14 @@ define(function(require, exports, module) {
 
     /**
      *  Allows for two circular bodies to collide and bounce off each other.
+     *  
      *
      *  @class Collision
      *  @constructor
      *  @extends Constraint
      *  @param options {Object}
      */
-    function Collision(options){
+    function Collision(options) {
         this.options = Object.create(Collision.DEFAULT_OPTIONS);
         if (options) this.setOptions(options);
 
@@ -31,7 +32,7 @@ define(function(require, exports, module) {
         this.impulse2 = new Vector();
 
         Constraint.call(this);
-    };
+    }
 
     Collision.prototype = Object.create(Constraint.prototype);
     Collision.prototype.constructor = Collision;
@@ -75,9 +76,9 @@ define(function(require, exports, module) {
         slop : 0
     };
 
-    function _normalVelocity(particle1, particle2){
+    function _normalVelocity(particle1, particle2) {
         return particle1.velocity.dot(particle2.velocity);
-    };
+    }
 
     /*
      * Setter for options.
@@ -85,7 +86,7 @@ define(function(require, exports, module) {
      * @method setOptions
      * @param options {Objects}
      */
-    Collision.prototype.setOptions = function(options){
+    Collision.prototype.setOptions = function setOptions(options) {
         for (var key in options) this.options[key] = options[key];
     };
 
@@ -97,7 +98,7 @@ define(function(require, exports, module) {
      * @param source {Body}         The source of the constraint
      * @param dt {Number}           Delta time
      */
-    Collision.prototype.applyConstraint = function(targets, source, dt){
+    Collision.prototype.applyConstraint = function applyConstraint(targets, source, dt) {
         if (source === undefined) return;
 
         var v1 = source.velocity;
@@ -116,15 +117,15 @@ define(function(require, exports, module) {
         var impulse1 = this.impulse1;
         var impulse2 = this.impulse2;
 
-        for (var i = 0; i < targets.length; i++){
+        for (var i = 0; i < targets.length; i++) {
             var target = targets[i];
 
             if (target === source) continue;
 
-            var v2 = target.velocity,
-                p2 = target.position,
-                w2 = target.inverseMass,
-                r2 = target.radius;
+            var v2 = target.velocity;
+            var p2 = target.position;
+            var w2 = target.inverseMass;
+            var r2 = target.radius;
 
             pDiff.set(p2.sub(p1));
             vDiff.set(v2.sub(v1));
@@ -134,11 +135,11 @@ define(function(require, exports, module) {
             var effMass = 1/(w1 + w2);
             var gamma   = 0;
 
-            if (overlap < 0){
+            if (overlap < 0) {
 
                 n.set(pDiff.normalize());
 
-                if (this._eventOutput){
+                if (this._eventOutput) {
                     var collisionData = {
                         target  : target,
                         source  : source,
@@ -152,7 +153,7 @@ define(function(require, exports, module) {
 
                 var lambda = (overlap <= slop)
                     ? ((1 + restitution) * n.dot(vDiff) + drift/dt * (overlap - slop)) / (gamma + dt/effMass)
-                    : ((1 + restitution) * n.dot(vDiff)) / (gamma + dt/effMass)
+                    : ((1 + restitution) * n.dot(vDiff)) / (gamma + dt/effMass);
 
                 n.mult(dt*lambda).put(impulse1);
                 impulse1.mult(-1).put(impulse2);

@@ -69,11 +69,13 @@ define(function(require, exports, module) {
     }
 
     /**
-     * @class Helper to TouchSync – tracks piped in touch events, organizes touch
-     *        events by ID, and emits track events back to TouchSync.
-     * @description
-     * @name TouchTracker
+     * Helper to TouchSync – tracks piped in touch events, organizes touch
+     *   events by ID, and emits track events back to TouchSync.
+     *   Emits 'trackstart', 'trackmove', and 'trackend' events upstream.
+     *
+     * @class TouchTracker
      * @constructor
+     * @param {Boolean} selective if false, save state for each touch.
      */
     function TouchTracker(selective) {
         this.selective = selective;
@@ -89,6 +91,13 @@ define(function(require, exports, module) {
         this.eventInput.on('touchcancel', _handleEnd.bind(this));
         this.eventInput.on('unpipe', _handleUnpipe.bind(this));
     }
+
+    /**
+     * Record touch data, if selective is false.
+     * @private
+     * @method track
+     * @param {Object} data touch data
+     */
     TouchTracker.prototype.track = function track(data) {
         this.touchHistory[data.touch.identifier] = [data];
     };

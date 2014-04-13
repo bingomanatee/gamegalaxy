@@ -13,17 +13,17 @@ define(function(require, exports, module) {
 
     /**
      *  A constraint that keeps a physics body on a given implicit curve
-     *  regardless of other physical forces are applied to it.
+     *    regardless of other physical forces are applied to it.
      *
-     *  A curve constraint is two surface constraints in disguise, as a curve is
-     *  the intersection of two surfaces, and is essentially constrained to both
+     *    A curve constraint is two surface constraints in disguise, as a curve is
+     *    the intersection of two surfaces, and is essentially constrained to both
      *
      *  @class Curve
      *  @constructor
      *  @extends Constraint
      *  @param options {Object}
      */
-    function Curve(options){
+    function Curve(options) {
         this.options = Object.create(Curve.DEFAULT_OPTIONS);
         if (options) this.setOptions(options);
 
@@ -32,7 +32,7 @@ define(function(require, exports, module) {
         this.impulse = new Vector();
 
         Constraint.call(this);
-    };
+    }
 
     Curve.prototype = Object.create(Constraint.prototype);
     Curve.prototype.constructor = Curve;
@@ -50,13 +50,15 @@ define(function(require, exports, module) {
 
         /**
          * An implicitly defined surface f(x,y,z) = 0 that body is constrained to
-         *   e.g. function(x,y,z){ x*x + y*y - r*r }
+         *   e.g. function(x,y,z) { x*x + y*y - r*r }
          *   corresponds to a circle of radius r pixels
          *
          * @attribute equation
          * @type Function
          */
-        equation  : function(x,y,z){ return 0; },
+        equation  : function(x,y,z) {
+            return 0;
+        },
 
         /**
          * An implicitly defined second surface that the body is constrained to
@@ -66,7 +68,9 @@ define(function(require, exports, module) {
          * @default the xy-plane
          * @optional
          */
-        plane : function(x,y,z){ return z; },
+        plane : function(x,y,z) {
+            return z;
+        },
 
         /**
          * The spring-like reaction when the constraint is violated
@@ -91,7 +95,7 @@ define(function(require, exports, module) {
      * @method setOptions
      * @param options {Objects}
      */
-    Curve.prototype.setOptions = function(options){
+    Curve.prototype.setOptions = function setOptions(options) {
         for (var key in options) this.options[key] = options[key];
     };
 
@@ -103,7 +107,7 @@ define(function(require, exports, module) {
      * @param source {Body} Not applicable
      * @param dt {Number} Delta time
      */
-    Curve.prototype.applyConstraint = function(targets, source, dt){
+    Curve.prototype.applyConstraint = function applyConstraint(targets, source, dt) {
         var options = this.options;
         var impulse = this.impulse;
         var J = this.J;
@@ -113,26 +117,28 @@ define(function(require, exports, module) {
         var dampingRatio = options.dampingRatio;
         var period = options.period;
 
-        for (var i = 0; i < targets.length; i++){
+        for (var i = 0; i < targets.length; i++) {
             var body = targets[i];
 
             var v = body.velocity;
             var p = body.position;
             var m = body.mass;
 
-            if (period === 0){
+            if (period === 0) {
                 var gamma = 0;
                 var beta = 1;
             }
-            else{
+            else {
                 var c = 4 * m * pi * dampingRatio / period;
                 var k = 4 * m * pi * pi / (period * period);
 
                 var gamma = 1 / (c + dt*k);
                 var beta  = dt*k / (c + dt*k);
-            };
+            }
 
-            var x = p.x, y = p.y, z = p.z;
+            var x = p.x;
+            var y = p.y;
+            var z = p.z;
 
             var f0  = f(x, y, z);
             var dfx = (f(x + epsilon, p, p) - f0) / epsilon;

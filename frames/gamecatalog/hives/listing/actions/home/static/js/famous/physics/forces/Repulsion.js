@@ -14,14 +14,14 @@ define(function(require, exports, module) {
 
     /**
      *  Repulsion is a force that repels (attracts) bodies away (towards)
-     *  each other. A repulsion of negative strength is attractive.
+     *    each other. A repulsion of negative strength is attractive.
      *
      *  @class Repulsion
      *  @constructor
      *  @extends Force
      *  @param {Object} options overwrites default options
      */
-    function Repulsion(options){
+    function Repulsion(options) {
         this.options = Object.create(Repulsion.DEFAULT_OPTIONS);
         if (options) this.setOptions(options);
 
@@ -29,7 +29,7 @@ define(function(require, exports, module) {
         this.disp  = new Vector();
 
         Force.call(this);
-    };
+    }
 
     Repulsion.prototype = Object.create(Force.prototype);
     Repulsion.prototype.constructor = Repulsion;
@@ -48,7 +48,7 @@ define(function(require, exports, module) {
          * @param {Number} r distance from the source body
          * @param {Number} cutoff the effective radius of influence
          */
-        LINEAR : function (r, cutoff){
+        LINEAR : function(r, cutoff) {
             return Math.max(1 - (1 / cutoff) * r, 0);
         },
 
@@ -59,8 +59,8 @@ define(function(require, exports, module) {
          * @param {Number} r distance from the source body
          * @param {Number} cutoff the minimum radius of influence
          */
-        MORSE : function (r, cutoff){
-            var r0 = (cutoff == 0) ? 100 : cutoff;
+        MORSE : function(r, cutoff) {
+            var r0 = (cutoff === 0) ? 100 : cutoff;
             var rShifted = r + r0 * (1 - Math.log(2)); //shift by x-intercept
             return Math.max(1 - Math.pow(1 - Math.exp(rShifted/r0 - 1), 2), 0);
         },
@@ -72,7 +72,7 @@ define(function(require, exports, module) {
          * @param {Number} r distance from the source body
          * @param {Number} cutoff a distance shift to avoid singularities
          */
-        INVERSE : function(r, cutoff){
+        INVERSE : function(r, cutoff) {
             return 1 / (1 - cutoff + r);
         },
 
@@ -83,7 +83,7 @@ define(function(require, exports, module) {
          * @param {Number} r distance from the source body
          * @param {Number} cutoff a distance shift to avoid singularities
          */
-        GRAVITY : function(r, cutoff){
+        GRAVITY : function(r, cutoff) {
             return 1 / (1 - cutoff + r*r);
         }
     };
@@ -154,8 +154,8 @@ define(function(require, exports, module) {
      * @method setOptions
      * @param {Objects} options
      */
-    Repulsion.prototype.setOptions = function(options){
-        if (options.anchor !== undefined){
+    Repulsion.prototype.setOptions = function setOptions(options) {
+        if (options.anchor !== undefined) {
             if (options.anchor.position instanceof Vector) this.options.anchor = options.anchor.position;
             if (options.anchor   instanceof Array)  this.options.anchor = new Vector(options.anchor);
             delete options.anchor;
@@ -170,37 +170,37 @@ define(function(require, exports, module) {
      * @param targets {Array.Body}  Array of bodies to apply force to
      * @param source {Body}         The source of the force
      */
-    Repulsion.prototype.applyForce = function(targets, source){
-        var options     = this.options,
-            force       = this.force,
-            disp        = this.disp;
+    Repulsion.prototype.applyForce = function applyForce(targets, source) {
+        var options     = this.options;
+        var force       = this.force;
+        var disp        = this.disp;
 
-        var strength    = options.strength,
-            anchor      = options.anchor || source.position,
-            cap         = options.cap,
-            cutoff      = options.cutoff,
-            rMin        = options.range[0],
-            rMax        = options.range[1],
-            decayFn     = options.decayFunction;
+        var strength    = options.strength;
+        var anchor      = options.anchor || source.position;
+        var cap         = options.cap;
+        var cutoff      = options.cutoff;
+        var rMin        = options.range[0];
+        var rMax        = options.range[1];
+        var decayFn     = options.decayFunction;
 
         if (strength === 0) return;
 
-        for (var index in targets){
+        for (var index in targets) {
             var particle = targets[index];
 
-            if (particle == source) continue;
+            if (particle === source) continue;
 
-            var m1 = particle.mass,
-                p1 = particle.position;
+            var m1 = particle.mass;
+            var p1 = particle.position;
 
             disp.set(p1.sub(anchor));
             var r = disp.norm();
 
-            if (r < rMax && r > rMin){
+            if (r < rMax && r > rMin) {
                 force.set(disp.normalize(strength * m1 * decayFn(r, cutoff)).cap(cap));
                 particle.applyForce(force);
-            };
-        };
+            }
+        }
 
     };
 

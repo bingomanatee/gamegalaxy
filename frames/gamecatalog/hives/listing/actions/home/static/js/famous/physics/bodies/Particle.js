@@ -15,9 +15,9 @@ define(function(require, exports, module) {
 
     /**
      * A point body that is controlled by the Physics Engine. A particle has
-     * position and velocity states that are updated by the Physics Engine.
-     * Ultimately, a particle is a _special type of modifier, and can be added to
-     * the Famous render tree like any other modifier.
+     *   position and velocity states that are updated by the Physics Engine.
+     *   Ultimately, a particle is a _special type of modifier, and can be added to
+     *   the Famous render tree like any other modifier.
      *
      * @constructor
      * @class Particle
@@ -25,7 +25,7 @@ define(function(require, exports, module) {
      * @uses Modifier
      * @extensionfor Body
      */
-     function Particle(options){
+     function Particle(options) {
         options = options || {};
 
         // registers
@@ -56,14 +56,15 @@ define(function(require, exports, module) {
         this._engine         = null;
         this._eventOutput    = null;
         this._positionGetter = null;
-        this._velocityGetter = null;
+
+        this.transform = Transform.identity.slice();
 
         // cached _spec
         this._spec = {
-            transform : Transform.identity,
+            transform : this.transform,
             target    : null
         };
-    };
+    }
 
     /**
      * @property Particle.DEFAULT_OPTIONS
@@ -103,7 +104,6 @@ define(function(require, exports, module) {
         axis : undefined
     };
 
-
     /**
      * Kinetic energy threshold needed to update the body
      *
@@ -123,12 +123,13 @@ define(function(require, exports, module) {
      * @default 1e-7
      */
     Particle.AXES = {
-        X : 0x0001, // hexadecimal for 1
-        Y : 0x0002, // hexadecimal for 2
-        Z : 0x0004  // hexadecimal for 4
+        X : 0x00, // hexadecimal for 0
+        Y : 0x01, // hexadecimal for 1
+        Z : 0x02  // hexadecimal for 2
     };
 
     // Integrator for updating the particle's state
+    // TODO: make this a singleton
     Particle.INTEGRATOR = new Integrator();
 
     //Catalogue of outputted events
@@ -139,15 +140,25 @@ define(function(require, exports, module) {
     };
 
     // Cached timing function
-    var now = (function(){ return Date.now; })();
+    var now = (function() {
+        return Date.now;
+    })();
 
-    Particle.prototype.sleep = function(){
+    /**
+     * Stops the particle from updating
+     * @method sleep
+     */
+    Particle.prototype.sleep = function sleep() {
         if (this._isSleeping) return;
         this.emit(_events.end, this);
         this._isSleeping = true;
     };
 
-    Particle.prototype.wake = function(){
+    /**
+     * Starts the particle update
+     * @method wake
+     */
+    Particle.prototype.wake = function wake() {
         if (!this._isSleeping) return;
         this.emit(_events.start, this);
         this._isSleeping = false;
@@ -162,190 +173,257 @@ define(function(require, exports, module) {
     Particle.prototype.isBody = false;
 
     /**
-     * @attribute Curve.DEFAULT_OPTIONS
-     * @type Object
-     * @protected
-     * @static
+     * Basic setter for position
+     * @method getPosition
+     * @param position {Array|Vector}
      */
-    Particle.prototype.setPosition = function(p){
-        this.position.set(p);
+    Particle.prototype.setPosition = function setPosition(position) {
+        this.position.set(position);
     };
 
     /**
-     * Basic getter function for position Vector
-     * @name Particle#getPos
-     * @function
+     * 1-dimensional setter for position
+     * @method setPosition1D
+     * @param value {Number}
      */
-    Particle.prototype.getPosition = function(){
+    Particle.prototype.setPosition1D = function(x) {
+        this.position.x = x;
+    };
+
+    /**
+     * Basic getter function for position
+     * @method getPosition
+     * @return position {Array}
+     */
+    Particle.prototype.getPosition = function getPosition() {
         if (this._positionGetter instanceof Function)
             this.setPosition(this._positionGetter());
 
-        if (this._engine) this._engine.step();
-        else              this.step();
+        this._engine.step();
 
-        return this.position;
+        return this.position.get();
     };
 
-    Particle.prototype.positionFrom = function(_positionGetter){
-        this._positionGetter = _positionGetter;
+    /**
+     * 1-dimensional getter for position
+     * @method getPosition1D
+     * @return value {Number}
+     */
+    Particle.prototype.getPosition1D = function getPosition1D() {
+        this._engine.step();
+        return this.position.x;
+    };
+
+    /**
+     * Defines the position from outside the Physics Engine
+     * @method positionFrom
+     * @param positionGetter {Function}
+     */
+    Particle.prototype.positionFrom = function positionFrom(positionGetter) {
+        this._positionGetter = positionGetter;
     };
 
     /**
      * Basic setter function for velocity Vector
-     * @name Particle#setVel
+     * @method setVelocity
      * @function
      */
-    Particle.prototype.setVelocity = function(v){
-        this.velocity.set(v);
+    Particle.prototype.setVelocity = function setVelocity(velocity) {
+        this.velocity.set(velocity);
+        this.wake();
+    };
+
+    /**
+     * 1-dimensional setter for velocity
+     * @method setVelocity1D
+     * @param velocity {Number}
+     */
+    Particle.prototype.setVelocity1D = function(x) {
+        this.velocity.x = x;
         this.wake();
     };
 
     /**
      * Basic getter function for velocity Vector
-     * @name Particle#getVel
-     * @function
+     * @method getVelocity
+     * @return velocity {Array}
      */
-    Particle.prototype.getVelocity = function(){
-        if (this._velocityGetter) this.setVelocity(this._velocityGetter());
-        return this.velocity;
+    Particle.prototype.getVelocity = function getVelocity() {
+        return this.velocity.get();
     };
 
-    Particle.prototype.velocityFrom = function(_velocityGetter){
-        this._velocityGetter = _velocityGetter;
+    /**
+     * 1-dimensional getter for velocity
+     * @method getVelocity1D
+     * @return velocity {Number}
+     */
+    Particle.prototype.getVelocity1D = function getVelocity1D() {
+        return this.velocity.x;
     };
 
     /**
      * Basic setter function for mass quantity
-     * @name Particle#setMass
-     * @function
+     * @method setMass
+     * @param mass {Number} mass
      */
-    Particle.prototype.setMass = function(m){
-        this.mass = m;
-        this.inverseMass = 1 / m;
+    Particle.prototype.setMass = function setMass(mass) {
+        this.mass = mass;
+        this.inverseMass = 1 / mass;
     };
 
     /**
      * Basic getter function for mass quantity
-     * @name Particle#getMass
-     * @function
+     * @method getMass
+     * @return mass {Number}
      */
-    Particle.prototype.getMass = function(){
+    Particle.prototype.getMass = function getMass() {
         return this.mass;
     };
 
     /**
-     * Set position, velocity, force, and accel Vectors each to (0, 0, 0)
-     * @name Particle#reset
-     * @function
+     * Reset position and velocity
+     * @method reset
+     * @param position {Array|Vector}
+     * @param velocity {Array|Vector}
      */
-    Particle.prototype.reset = function(p,v){
-        p = p || [0,0,0];
-        v = v || [0,0,0];
-        this.setPosition(p);
-        this.setVelocity(v);
+    Particle.prototype.reset = function reset(position, velocity) {
+        this.setPosition(position || [0,0,0]);
+        this.setVelocity(velocity || [0,0,0]);
     };
 
     /**
-     * Add force Vector to existing internal force Vector
-     * @name Particle#applyForce
-     * @function
+     * Add force vector to existing internal force Vector
+     * @method applyForce
+     * @param force {Vector}
      */
-    Particle.prototype.applyForce = function(force){
+    Particle.prototype.applyForce = function applyForce(force) {
         if (force.isZero()) return;
-        this.force.set(this.force.add(force));
+        this.force.add(force).put(this.force);
         this.wake();
     };
 
     /**
-     * Add impulse (force*time) Vector to this Vector's velocity.
-     * @name Particle#applyImpulse
-     * @function
+     * Add impulse (change in velocity) Vector to this Vector's velocity.
+     * @method applyImpulse
+     * @param impulse {Vector}
      */
-    Particle.prototype.applyImpulse = function(impulse){
+    Particle.prototype.applyImpulse = function applyImpulse(impulse) {
         if (impulse.isZero()) return;
-        this.setVelocity(this.velocity.add(impulse.mult(this.inverseMass)));
+        var velocity = this.velocity;
+        velocity.add(impulse.mult(this.inverseMass)).put(velocity);
     };
 
-    Particle.prototype.integrateVelocity = function(dt){
+    /**
+     * Update a particle's velocity from its force accumulator
+     * @method integrateVelocity
+     * @param dt {Number} Time differential
+     */
+    Particle.prototype.integrateVelocity = function integrateVelocity(dt) {
         Particle.INTEGRATOR.integrateVelocity(this, dt);
     };
 
-    Particle.prototype.integratePosition = function(dt){
+    /**
+     * Update a particle's position from its velocity
+     * @method integratePosition
+     * @param dt {Number} Time differential
+     */
+    Particle.prototype.integratePosition = function integratePosition(dt) {
         Particle.INTEGRATOR.integratePosition(this, dt);
     };
 
-    Particle.prototype._integrate = function(dt){
+    /**
+     * Update the position and velocity of the particle
+     * @method _integrate
+     * @protected
+     * @param dt {Number} Time differential
+     */
+    Particle.prototype._integrate = function _integrate(dt) {
         this.integrateVelocity(dt);
         this.integratePosition(dt);
     };
 
-    Particle.prototype.step = function(){
-        if (this.getEnergy() < Particle.SLEEP_TOLERANCE){
-            this.sleep();
-            return;
-        };
-
-        if (!this._prevTime) this._prevTime = now();
-
-        var _currTime = now();
-        var dtFrame = _currTime - this._prevTime;
-        this._prevTime = _currTime;
-        if (dtFrame < 8) return;
-        this._integrate.call(this, dtFrame);
-        this.emit(_events.update, this);
-    };
-
     /**
      * Get kinetic energy of the particle.
-     * @name Particle#getEnergy
+     * @method getEnergy
      * @function
      */
-    Particle.prototype.getEnergy = function(){
+    Particle.prototype.getEnergy = function getEnergy() {
         return 0.5 * this.mass * this.velocity.normSquared();
     };
 
     /**
-     * Generate current positional transform from position (calculated)
-     *   and rotation (provided only at construction time)
-     * @name Particle#getTransform
-     * @function
+     * Generate transform from the current position state
+     * @method getTransform
+     * @return Transform {Transform}
      */
-    Particle.prototype.getTransform = function(){
-        var p    = this.getPosition();
+    Particle.prototype.getTransform = function getTransform() {
+        this._engine.step();
+
+        var position = this.position;
         var axis = this.axis;
+        var transform = this.transform;
 
-        if (axis !== undefined){
-            if (axis & ~Particle.AXES.X) {p.x = 0};
-            if (axis & ~Particle.AXES.Y) {p.y = 0};
-            if (axis & ~Particle.AXES.Z) {p.z = 0};
-        };
+        if (axis !== undefined) {
+            if (axis & ~Particle.AXES.X) {
+                position.x = 0;
+            }
+            if (axis & ~Particle.AXES.Y) {
+                position.y = 0;
+            }
+            if (axis & ~Particle.AXES.Z) {
+                position.z = 0;
+            }
+        }
 
-        return Transform.translate(p.x, p.y, p.z);
+        transform[12] = position.x;
+        transform[13] = position.y;
+        transform[14] = position.z;
+
+        return transform;
     };
 
-    Particle.prototype.modify = function(target){
+    /**
+     * The modify interface of a Modifier
+     * @method modify
+     * @param target {Spec}
+     * @return Spec {Spec}
+     */
+    Particle.prototype.modify = function modify(target) {
         var _spec = this._spec;
         _spec.transform = this.getTransform();
         _spec.target = target;
         return _spec;
     };
 
-    Particle.prototype.emit = function(type, data){
+    // private
+    function _createEventOutput() {
+        this._eventOutput = new EventHandler();
+        this._eventOutput.bindThis(this);
+        //overrides on/removeListener/pipe/unpipe methods
+        EventHandler.setOutputHandler(this, this._eventOutput);
+    }
+
+    Particle.prototype.emit = function emit(type, data) {
         if (!this._eventOutput) return;
         this._eventOutput.emit(type, data);
     };
 
-    function _createEventOutput() {
-        if (!this._eventOutput) return;
-        this._eventOutput = new EventHandler();
-        this._eventOutput.bindThis(this);
-        EventHandler.setOutputHandler(this, this._eventOutput);
-    }
-
-    Particle.prototype.on = function() { _createEventOutput.call(this); return this.on.apply(this, arguments); };
-    Particle.prototype.removeListener = function() { _createEventOutput.call(this); return this.removeListener.apply(this, arguments); };
-    Particle.prototype.pipe = function() { _createEventOutput.call(this); return this.pipe.apply(this, arguments); };
-    Particle.prototype.unpipe = function() { _createEventOutput.call(this); return this.unpipe.apply(this, arguments) };
+    Particle.prototype.on = function on() {
+        _createEventOutput.call(this);
+        return this.on.apply(this, arguments);
+    };
+    Particle.prototype.removeListener = function removeListener() {
+        _createEventOutput.call(this);
+        return this.removeListener.apply(this, arguments);
+    };
+    Particle.prototype.pipe = function pipe() {
+        _createEventOutput.call(this);
+        return this.pipe.apply(this, arguments);
+    };
+    Particle.prototype.unpipe = function unpipe() {
+        _createEventOutput.call(this);
+        return this.unpipe.apply(this, arguments);
+    };
 
     module.exports = Particle;
 });

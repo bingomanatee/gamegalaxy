@@ -8,74 +8,54 @@
  */
 
 define(function(require, exports, module) {
-    var FEH = require('famous/core/EventHandler');
+    var EventHandler = require('famous/core/EventHandler');
 
     /**
-     * @class Handles piped in mouse drag events. Outputs an object with two
-     *        properties, position and velocity.
-     * @description
-     * @name MouseSync
+     * Handles piped in mouse drag events. Outputs an object with two
+     *   properties, position and velocity.
+     *   Emits 'start', 'update' and 'end' events with DOM event passthroughs,
+     *   with position, velocity, and a delta key.
+     * @class MouseSync
      * @constructor
-     * @example
-     * define(function(require, exports, module) {
-     *     var Engine = require('famous/core/Engine');
-     *     var Surface = require('famous/core/Surface');
-     *     var Modifier = require('famous/core/Modifier');
-     *     var FM = require('famous/core/Matrix');
-     *     var MouseSync = require('famous/inputs/MouseSync');
-     *     var Context = Engine.createContext();
-     *
-     *     var surface = new Surface({
-     *         size: [200,200],
-     *         properties: {
-     *             backgroundColor: 'red'
-     *         }
-     *     });
-     *
-     *     var modifier = new Modifier({
-     *         transform: undefined
-     *     });
-     *
-     *     var position = 0;
-     *     var sync = new MouseSync(function(){
-     *         return position;
-     *     }, {direction: MouseSync.DIRECTION_Y});
-     *
-     *     surface.pipe(sync);
-     *     sync.on('update', function(data) {
-     *         var edge = window.innerHeight - (surface.getSize()[1])
-     *         if (data.p > edge) {
-     *             position = edge;
-     *         } else if (data.p < 0) {
-     *             position = 0;
-     *         } else {
-     *             position = data.p;
-     *         }
-     *         modifier.setTransform(FM.translate(0, position, 0));
-     *         surface.setContent('position' + position + '<br>' + 'velocity' + data.v.toFixed(2));
-     *     });
-     *     Context.link(modifier).link(surface);
-     * });
+     * @param {function} legacyGetter position getter object (deprecated)
+     * @param {Object} options default options overrides
      */
-    function MouseSync(targetGet, options) {
-        this.targetGet = targetGet || null;
+    function MouseSync(legacyGetter, options) {
+        if (arguments.length === 2){
+            this._legacyPositionGetter = arguments[0];
+            options = arguments[1];
+        }
+        else {
+            this._legacyPositionGetter = null;
+            options = arguments[0];
+        }
 
         this.options =  {
             direction: undefined,
             rails: false,
             scale: 1,
             stallTime: 50,
-            propogate: true           //events piped to document on mouseleave
+            propogate: true  //events piped to document on mouseleave
+        };
+
+        this._payload = {
+            delta    : null,
+            position : null,
+            velocity : null,
+            clientX  : undefined,
+            clientY  : undefined,
+            offsetX  : undefined,
+            offsetY  : undefined
         };
 
         if (options) this.setOptions(options);
         else this.setOptions(this.options);
 
-        this.input = new FEH();
-        this.output = new FEH();
+        this.input = new EventHandler();
+        this.output = new EventHandler();
 
-        FEH.setInputHandler(this, this.input);
-        FEH.setOutputHandler(this, this.output);
+        EventHandler.setInputHandler(this, this.input);
+        EventHandler.setOutputHandler(this, this.output);
 
         this._prevCoord = undefined;
         this._prevTime = undefined;
@@ -89,23 +69,50 @@ define(function(require, exports, module) {
         else this.input.on('mouseleave', _handleEnd.bind(this));
     }
 
-    /** @const */ MouseSync.DIRECTION_X = 0;
-    /** @const */ MouseSync.DIRECTION_Y = 1;
+    MouseSync.DIRECTION_X = 0;
+    MouseSync.DIRECTION_Y = 1;
 
-    function _handleStart(e) {
-        e.preventDefault(); // prevent drag
-        this._prevCoord = [e.clientX, e.clientY];
-        this._prevTime = Date.now();
-        this._prevVel = (this.options.direction !== undefined) ? 0 : [0, 0];
-        this.output.emit('start');
+    function _clearPayload() {
+        var payload = this._payload;
+        payload.delta    = null;
+        payload.position = null;
+        payload.velocity = null;
+        payload.clientX  = undefined;
+        payload.clientY  = undefined;
+        payload.offsetX  = undefined;
+        payload.offsetY  = undefined;
     }
 
-    function _handleMove(e) {
+    function _handleStart(event) {
+        event.preventDefault(); // prevent drag
+        _clearPayload.call(this);
+
+        var x = event.clientX;
+        var y = event.clientY;
+
+        this._prevCoord = [x, y];
+        this._prevTime = Date.now();
+        this._prevVel = (this.options.direction !== undefined) ? 0 : [0, 0];
+
+        var payload = this._payload;
+        payload.clientX = x;
+        payload.clientY = y;
+        payload.offsetX = event.offsetX;
+        payload.offsetY = event.offsetY;
+
+        this.output.emit('start', payload);
+    }
+
+    function _handleMove(event) {
         if (!this._prevCoord) return;
 
         var prevCoord = this._prevCoord;
         var prevTime = this._prevTime;
-        var currCoord = [e.clientX, e.clientY];
+
+        var x = event.clientX;
+        var y = event.clientY;
+
+        var currCoord = [x, y];
 
         var currTime = Date.now();
 
@@ -122,54 +129,77 @@ define(function(require, exports, module) {
         var velX = diffX / diffTime;
         var velY = diffY / diffTime;
 
-        var prevPos = this.targetGet ? this.targetGet() : 0;
         var scale = this.options.scale;
+        var prevPos;
         var nextPos;
         var nextVel;
+        var nextDelta;
 
         if (this.options.direction === MouseSync.DIRECTION_X) {
-            nextPos = prevPos + scale * diffX;
+            prevPos = this._legacyPositionGetter ? this._legacyPositionGetter() : 0;
+            nextDelta = scale * diffX;
+            nextPos = prevPos + nextDelta;
             nextVel = scale * velX;
         }
         else if (this.options.direction === MouseSync.DIRECTION_Y) {
-            nextPos = prevPos + scale * diffY;
+            prevPos = this._legacyPositionGetter ? this._legacyPositionGetter() : 0;
+            nextDelta = scale * diffY;
+            nextPos = prevPos + nextDelta;
             nextVel = scale * velY;
         }
         else {
-            nextPos = [prevPos[0] + scale * diffX, prevPos[1] + scale * diffY];
+            prevPos = this._legacyPositionGetter ? this._legacyPositionGetter() : [0,0];
+            nextDelta = [scale * diffX, scale * diffY];
+            nextPos = [prevPos[0] + nextDelta[0], prevPos[1] + nextDelta[1]];
             nextVel = [scale * velX, scale * velY];
         }
 
-        this.output.emit('update', {p: nextPos, v: nextVel});
+        var payload = this._payload;
+        payload.delta    = nextDelta;
+        payload.position = nextPos;
+        payload.velocity = nextVel;
+        payload.clientX  = x;
+        payload.clientY  = y;
+        payload.offsetX  = event.offsetX;
+        payload.offsetY  = event.offsetY;
+
+        this.output.emit('update', payload);
 
         this._prevCoord = currCoord;
         this._prevTime = currTime;
         this._prevVel = nextVel;
     }
 
-    function _handleEnd() {
+    function _handleEnd(event) {
         if (!this._prevCoord) return;
 
         var prevTime = this._prevTime;
         var currTime = Date.now();
 
-        if (currTime - prevTime > this.options.stallTime) this._prevVel = (this.options.direction === undefined) ? [0, 0] : 0;
+        if (currTime - prevTime > this.options.stallTime)
+            this._prevVel = (this.options.direction === undefined) ? [0, 0] : 0;
 
-        var pos = this.targetGet();
+        var payload = this._payload;
+        payload.velocity = this._prevVel;
+        payload.clientX  = event.clientX;
+        payload.clientY  = event.clientY;
+        payload.offsetX  = event.offsetX;
+        payload.offsetY  = event.offsetY;
 
-        this.output.emit('end', {p: pos, v: this._prevVel});
+        this.output.emit('end', payload);
 
         this._prevCoord = undefined;
         this._prevTime = undefined;
         this._prevVel = undefined;
     }
 
-    function _handleLeave() {
+    // handle 'mouseup' and 'mousemove'
+    function _handleLeave(event) {
         if (!this._prevCoord) return;
 
         var boundMove = _handleMove.bind(this);
-        var boundEnd = function(e) {
-            _handleEnd.call(this, e);
+        var boundEnd = function(event) {
+            _handleEnd.call(this, event);
             document.removeEventListener('mousemove', boundMove);
             document.removeEventListener('mouseup', boundEnd);
         }.bind(this);
@@ -178,10 +208,28 @@ define(function(require, exports, module) {
         document.addEventListener('mouseup', boundEnd);
     }
 
+    /**
+     * Return entire options dictionary, including defaults.
+     *
+     * @method getOptions
+     * @return {Object} configuration options
+     */
     MouseSync.prototype.getOptions = function getOptions() {
         return this.options;
     };
 
+    /**
+     * Set internal options, overriding any default options
+     *
+     * @method setOptions
+     *
+     * @param {Object} [options] overrides of default options
+     * @param {Number} [options.stallTime] ms update gap until we consider velocity to be 0.
+     * @param {Number} [options.rails] whether to constrain to nearest axis.
+     * @param {Number} [options.direction] MouseSync.DIRECTION_X, DIRECTION_Y -
+     *    pay attention only to one specific direction.
+     * @param {Number} [options.scale] constant factor to scale velocity output
+     */
     MouseSync.prototype.setOptions = function setOptions(options) {
         if (options.direction !== undefined) this.options.direction = options.direction;
         if (options.rails !== undefined) this.options.rails = options.rails;

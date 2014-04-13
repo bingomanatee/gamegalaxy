@@ -82,9 +82,9 @@ define(function(require, exports, module) {
      * a transitionable that manages a full transform (a sixteen value array).
      * @chainable
      */
-    RenderController.prototype.inTransformFrom = function(transform) {
-        if(transform instanceof Function) this.inTransformMap = transform;
-        else if(transform && transform.get) this.inTransformMap = transform.get.bind(transform);
+    RenderController.prototype.inTransformFrom = function inTransformFrom(transform) {
+        if (transform instanceof Function) this.inTransformMap = transform;
+        else if (transform && transform.get) this.inTransformMap = transform.get.bind(transform);
         else throw new Error('inTransformFrom takes only function or getter object');
         //TODO: tween transition
         return this;
@@ -97,9 +97,9 @@ define(function(require, exports, module) {
      * a transitionable that manages opacity (a number between zero and one).
      * @chainable
      */
-    RenderController.prototype.inOpacityFrom = function(opacity) {
-        if(opacity instanceof Function) this.inOpacityMap = opacity;
-        else if(opacity && opacity.get) this.inOpacityMap = opacity.get.bind(opacity);
+    RenderController.prototype.inOpacityFrom = function inOpacityFrom(opacity) {
+        if (opacity instanceof Function) this.inOpacityMap = opacity;
+        else if (opacity && opacity.get) this.inOpacityMap = opacity.get.bind(opacity);
         else throw new Error('inOpacityFrom takes only function or getter object');
         //TODO: tween opacity
         return this;
@@ -112,9 +112,9 @@ define(function(require, exports, module) {
      * a transitionable that manages origin (a two value array of numbers between zero and one).
      * @chainable
      */
-    RenderController.prototype.inOriginFrom = function(origin) {
-        if(origin instanceof Function) this.inOriginMap = origin;
-        else if(origin && origin.get) this.inOriginMap = origin.get.bind(origin);
+    RenderController.prototype.inOriginFrom = function inOriginFrom(origin) {
+        if (origin instanceof Function) this.inOriginMap = origin;
+        else if (origin && origin.get) this.inOriginMap = origin.get.bind(origin);
         else throw new Error('inOriginFrom takes only function or getter object');
         //TODO: tween origin
         return this;
@@ -127,9 +127,9 @@ define(function(require, exports, module) {
      * a transitionable that manages a full transform (a sixteen value array).
      * @chainable
      */
-    RenderController.prototype.outTransformFrom = function(transform) {
-        if(transform instanceof Function) this.outTransformMap = transform;
-        else if(transform && transform.get) this.outTransformMap = transform.get.bind(transform);
+    RenderController.prototype.outTransformFrom = function outTransformFrom(transform) {
+        if (transform instanceof Function) this.outTransformMap = transform;
+        else if (transform && transform.get) this.outTransformMap = transform.get.bind(transform);
         else throw new Error('inTransformFrom takes only function or getter object');
         //TODO: tween transition
         return this;
@@ -142,9 +142,9 @@ define(function(require, exports, module) {
      * a transitionable that manages opacity (a number between zero and one).
      * @chainable
      */
-    RenderController.prototype.outOpacityFrom = function(opacity) {
-        if(opacity instanceof Function) this.outOpacityMap = opacity;
-        else if(opacity && opacity.get) this.outOpacityMap = opacity.get.bind(opacity);
+    RenderController.prototype.outOpacityFrom = function outOpacityFrom(opacity) {
+        if (opacity instanceof Function) this.outOpacityMap = opacity;
+        else if (opacity && opacity.get) this.outOpacityMap = opacity.get.bind(opacity);
         else throw new Error('inOpacityFrom takes only function or getter object');
         //TODO: tween opacity
         return this;
@@ -157,9 +157,9 @@ define(function(require, exports, module) {
      * a transitionable that manages origin (a two value array of numbers between zero and one).
      * @chainable
      */
-    RenderController.prototype.outOriginFrom = function(origin) {
-        if(origin instanceof Function) this.outOriginMap = origin;
-        else if(origin && origin.get) this.outOriginMap = origin.get.bind(origin);
+    RenderController.prototype.outOriginFrom = function outOriginFrom(origin) {
+        if (origin instanceof Function) this.outOriginMap = origin;
+        else if (origin && origin.get) this.outOriginMap = origin.get.bind(origin);
         else throw new Error('inOriginFrom takes only function or getter object');
         //TODO: tween origin
         return this;
@@ -169,32 +169,32 @@ define(function(require, exports, module) {
      * Show displays the targeted renderable with a transition and an optional callback to
      * execute afterwards.
      * @method show
-     * @param {Renderable} renderable The renderable you want to show.
-     * @param {Transition} [Transition] Overwrites the default transition in to display the
+     * @param {Object} renderable The renderable you want to show.
+     * @param {Transition} [transition] Overwrites the default transition in to display the
      * passed-in renderable.
      * @param {function} [callback] Executes after transitioning in the renderable.
      * @chainable
      */
-    RenderController.prototype.show = function(renderable, transition, callback) {
-        if(!renderable) {
+    RenderController.prototype.show = function show(renderable, transition, callback) {
+        if (!renderable) {
             return this.hide(callback);
         }
 
-        if(transition instanceof Function) {
+        if (transition instanceof Function) {
             callback = transition;
             transition = null;
         }
 
-        if(this._showing >= 0) {
-            if(this.options.overlap) this.hide(callback);
+        if (this._showing >= 0) {
+            if (this.options.overlap) this.hide(callback);
             else {
-                if(this._nextRenderable) {
+                if (this._nextRenderable) {
                     this._nextRenderable = renderable;
                 }
                 else {
                     this._nextRenderable = renderable;
                     this.hide(function() {
-                        if(this._nextRenderable === renderable) this.show(this._nextRenderable, callback);
+                        if (this._nextRenderable === renderable) this.show(this._nextRenderable, callback);
                         this._nextRenderable = null;
                     });
                 }
@@ -206,13 +206,13 @@ define(function(require, exports, module) {
 
         // check to see if we should restore
         var renderableIndex = this._renderables.indexOf(renderable);
-        if(renderableIndex >= 0) {
+        if (renderableIndex >= 0) {
             this._showing = renderableIndex;
             state = this._states[renderableIndex];
             state.halt();
 
             var outgoingIndex = this._outgoingRenderables.indexOf(renderable);
-            if(outgoingIndex >= 0) this._outgoingRenderables.splice(outgoingIndex, 1);
+            if (outgoingIndex >= 0) this._outgoingRenderables.splice(outgoingIndex, 1);
         }
         else {
             state = new Transitionable(0);
@@ -232,24 +232,24 @@ define(function(require, exports, module) {
             this._renderables.push(renderable);
         }
 
-        if(!transition) transition = this.options.inTransition;
+        if (!transition) transition = this.options.inTransition;
         state.set(1, transition, callback);
     };
 
     /**
      * Hide hides the currently displayed renderable with an out transition.
      * @method hide
-     * @param {Transition} [Transition] Overwrites the default transition in to hide the
+     * @param {Transition} [transition] Overwrites the default transition in to hide the
      * currently controlled renderable.
      * @param {function} [callback] Executes after transitioning out the renderable.
      * @chainable
      */
-    RenderController.prototype.hide = function(transition, callback) {
-        if(this._showing < 0) return;
+    RenderController.prototype.hide = function hide(transition, callback) {
+        if (this._showing < 0) return;
         var index = this._showing;
         this._showing = -1;
 
-        if(transition instanceof Function) {
+        if (transition instanceof Function) {
             callback = transition;
             transition = undefined;
         }
@@ -263,12 +263,12 @@ define(function(require, exports, module) {
         modifier.opacityFrom(this.outOpacityMap ? _mappedState.bind(this, this.outOpacityMap, state) : null);
         modifier.originFrom(this.outOriginMap ? _mappedState.bind(this, this.outOriginMap, state) : null);
 
-        if(this._outgoingRenderables.indexOf(renderable) < 0) this._outgoingRenderables.push(renderable);
+        if (this._outgoingRenderables.indexOf(renderable) < 0) this._outgoingRenderables.push(renderable);
 
-        if(!transition) transition = this.options.outTransition;
+        if (!transition) transition = this.options.outTransition;
         state.halt();
         state.set(0, transition, function(node, modifier, state, renderable) {
-            if(this._outgoingRenderables.indexOf(renderable) >= 0) {
+            if (this._outgoingRenderables.indexOf(renderable) >= 0) {
                 var index = this._nodes.indexOf(node);
                 this._nodes.splice(index, 1);
                 this._modifiers.splice(index, 1);
@@ -276,16 +276,23 @@ define(function(require, exports, module) {
                 this._renderables.splice(index, 1);
                 this._outgoingRenderables.splice(this._outgoingRenderables.indexOf(renderable), 1);
 
-                if(this._showing >= index) this._showing--;
+                if (this._showing >= index) this._showing--;
             }
-            if(callback) callback.call(this);
+            if (callback) callback.call(this);
         }.bind(this, node, modifier, state, renderable));
     };
 
-    RenderController.prototype.render = function() {
+    /**
+     * Generate a render spec from the contents of this component.
+     *
+     * @private
+     * @method render
+     * @return {number} Render spec for this component
+     */
+    RenderController.prototype.render = function render() {
         var result = this._output;
-        if(result.length > this._nodes.length) result.splice(this._nodes.length);
-        for(var i = 0; i < this._nodes.length; i++) {
+        if (result.length > this._nodes.length) result.splice(this._nodes.length);
+        for (var i = 0; i < this._nodes.length; i++) {
             result[i] = this._nodes[i].render();
         }
         return result;

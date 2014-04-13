@@ -19,18 +19,18 @@ define(function(require, exports, module) {
      * @class HeaderFooterLayout
      * @constructor
      * @param {Options} [options] An object of configurable options.
-     * @param {Number} [direction=HeaderFooterLayout.DIRECTION_Y] A direction of HeaderFooterLayout.DIRECTION_X
+     * @param {Number} [options.direction=HeaderFooterLayout.DIRECTION_Y] A direction of HeaderFooterLayout.DIRECTION_X
      * lays your HeaderFooterLayout instance horizontally, and a direction of HeaderFooterLayout.DIRECTION_Y
      * lays it out vertically.
-     * @param {Number} [headerSize=undefined]  The amount of pixels allocated to the header node
+     * @param {Number} [options.headerSize=undefined]  The amount of pixels allocated to the header node
      * in the HeaderFooterLayout instance's direction.
-     * @param {Number} [footerSize=undefined] The amount of pixels allocated to the footer node
+     * @param {Number} [options.footerSize=undefined] The amount of pixels allocated to the footer node
      * in the HeaderFooterLayout instance's direction.
      */
     function HeaderFooterLayout(options) {
         this.options = Object.create(HeaderFooterLayout.DEFAULT_OPTIONS);
         this._optionsManager = new OptionsManager(this.options);
-        if(options) this.setOptions(options);
+        if (options) this.setOptions(options);
 
         this._entityId = Entity.register(this);
 
@@ -48,7 +48,8 @@ define(function(require, exports, module) {
      *  @default 0
      *  @protected
      */
-    /** @const */ HeaderFooterLayout.DIRECTION_X = 0;
+    HeaderFooterLayout.DIRECTION_X = 0;
+
     /**
      *  When used as a value for your HeaderFooterLayout's direction option, causes it to lay out vertically.
      *
@@ -58,17 +59,24 @@ define(function(require, exports, module) {
      *  @default 1
      *  @protected
      */
-    /** @const */ HeaderFooterLayout.DIRECTION_Y = 1;
+    HeaderFooterLayout.DIRECTION_Y = 1;
 
     HeaderFooterLayout.DEFAULT_OPTIONS = {
         direction: HeaderFooterLayout.DIRECTION_Y,
-        headerSize: null,
-        footerSize: null,
+        headerSize: undefined,
+        footerSize: undefined,
         defaultHeaderSize: 0,
         defaultFooterSize: 0
     };
 
-    HeaderFooterLayout.prototype.render = function() {
+    /**
+     * Generate a render spec from the contents of this component.
+     *
+     * @private
+     * @method render
+     * @return {Object} Render spec for this component
+     */
+    HeaderFooterLayout.prototype.render = function render() {
         return this._entityId;
     };
 
@@ -78,7 +86,7 @@ define(function(require, exports, module) {
      * @method setOptions
      * @param {Options} options An object of configurable options for the HeaderFooterLayout instance.
      */
-    HeaderFooterLayout.prototype.setOptions = function(options) {
+    HeaderFooterLayout.prototype.setOptions = function setOptions(options) {
         return this._optionsManager.setOptions(options);
     };
 
@@ -88,26 +96,35 @@ define(function(require, exports, module) {
     }
 
     function _outputTransform(offset) {
-        if(this.options.direction == HeaderFooterLayout.DIRECTION_X) return Transform.translate(offset, 0, 0);
+        if (this.options.direction == HeaderFooterLayout.DIRECTION_X) return Transform.translate(offset, 0, 0);
         else return Transform.translate(0, offset, 0);
     }
 
     function _finalSize(directionSize, size) {
-        if(this.options.direction == HeaderFooterLayout.DIRECTION_X) return [directionSize, size[1]];
+        if (this.options.direction == HeaderFooterLayout.DIRECTION_X) return [directionSize, size[1]];
         else return [size[0], directionSize];
     }
 
-    HeaderFooterLayout.prototype.commit = function(context) {
+    /**
+     * Apply changes from this component to the corresponding document element.
+     * This includes changes to classes, styles, size, content, opacity, origin,
+     * and matrix transforms.
+     *
+     * @private
+     * @method commit
+     * @param {Context} context commit context
+     */
+    HeaderFooterLayout.prototype.commit = function commit(context) {
         var transform = context.transform;
         var origin = context.origin;
         var size = context.size;
         var opacity = context.opacity;
 
-        var headerSize = (this.options.headerSize !== null) ? this.options.headerSize : _resolveNodeSize.call(this, this.header, this.options.defaultHeaderSize);
-        var footerSize = (this.options.footerSize !== null) ? this.options.footerSize : _resolveNodeSize.call(this, this.footer, this.options.defaultFooterSize);
+        var headerSize = (this.options.headerSize !== undefined) ? this.options.headerSize : _resolveNodeSize.call(this, this.header, this.options.defaultHeaderSize);
+        var footerSize = (this.options.footerSize !== undefined) ? this.options.footerSize : _resolveNodeSize.call(this, this.footer, this.options.defaultFooterSize);
         var contentSize = size[this.options.direction] - headerSize - footerSize;
 
-        if(size) transform = Transform.moveThen([-size[0]*origin[0], -size[1]*origin[1], 0], transform);
+        if (size) transform = Transform.moveThen([-size[0]*origin[0], -size[1]*origin[1], 0], transform);
 
         var result = [
             {

@@ -1,22 +1,15 @@
 /**
- * HeaderFooterLayout
- * ------------------
+ * GameGalaxy
  *
- * HeaderFooterLayout is a layout which will arrange three renderables
- * into a header and footer area of defined size and a content area
- * of flexible size.
+ * GameGalaxy is a display system for GiantBomb's game API.
  *
- * In this example we create a basic HeaderFooterLayout and define a
- * size for the header and footer
  */
 define(function (require, exports, module) {
 
-    var Engine = require("famous/core/Engine");
     var RenderNode = require('famous/core/RenderNode');
     var Surface = require("famous/core/Surface");
     var HeaderFooterLayout = require("famous/views/HeaderFooterLayout");
     var Transform = require('famous/core/Transform');
-    var giantbomb = require('giantbomb');
     var Modifier = require('famous/core/Modifier');
     var ContainerSurface = require('famous/Surfaces/ContainerSurface');
     var Scrollview = require('famous/views/Scrollview');
@@ -24,38 +17,48 @@ define(function (require, exports, module) {
     var ImageSurface = require('famous/surfaces/ImageSurface');
     var Transitionable = require("famous/transitions/Transitionable");
     var TransitionableTransform = require("famous/transitions/TransitionableTransform");
+    var Easing = require('famous/transitions/Easing');
+    var Lightbox = require('famous/views/Lightbox');
+
+    /// local classes, utilities
+    var Timeline = require('Timeline');
+    var config = require('config');
+    var giantbomb = require('giantbomb');
+    var Platform = require('Platform');
+
+    // a sloppy hack for sharing the config
 
     // sizing context
-    var ENTRY_MARGIN = 20;
-    var ENTRY_LABEL_SIZE = 160;
-    var ENTRY_ROW_HEIGHT = 35;
-    var ENTRY_HEIGHT = 70;
-    var HEADER_HEIGHT = 80;
-    var FOOTER_HEIGHT = 50;
-    var SEARCH_LABEL_SIZE = 150;
-    var SEARCH_INPUT_SIZE = 350;
+    var ENTRY_MARGIN = config.ENTRY_MARGIN;
+    var ENTRY_LABEL_SIZE = config.ENTRY_LABEL_SIZE;
+    var ENTRY_ROW_HEIGHT = config.ENTRY_ROW_HEIGHT;
+    var ENTRY_HEIGHT = config.ENTRY_HEIGHT;
+    var HEADER_HEIGHT = config.HEADER_HEIGHT;
+    var FOOTER_HEIGHT = config.FOOTER_HEIGHT;
+    var SEARCH_LABEL_SIZE = config.SEARCH_LABEL_SIZE;
+    var SEARCH_INPUT_SIZE = config.SEARCH_INPUT_SIZE;
 
     // game row item sizes
-    var GAME_ROW_ITEM_HEIGHT = 30;
-    var GAME_ROW_ITEM_PLATFORM_WIDTH = 250;
-    var GAME_ROW_NAME_WIDTH = 300;
-    var GAME_ROW_ITEM_DATE_WIDTH = 100;
-    var GAME_HEADER_HEIGHT = 40;
-    var GAME_HEADER_LABEL_HEIGHT = 25;
-    var ICON_WIDTH = 20;
-    var ICON_MARGIN = 8;
-    var CALLOUT_Z = 0;
+    var GAME_ROW_ITEM_HEIGHT = config.GAME_ROW_ITEM_HEIGHT;
+    var GAME_ROW_ITEM_PLATFORM_WIDTH = config.GAME_ROW_ITEM_PLATFORM_WIDTH;
+    var GAME_ROW_NAME_WIDTH = config.GAME_ROW_NAME_WIDTH;
+    var GAME_ROW_ITEM_DATE_WIDTH = config.GAME_ROW_ITEM_DATE_WIDTH;
+    var GAME_HEADER_HEIGHT = config.GAME_HEADER_HEIGHT;
+    var GAME_HEADER_LABEL_HEIGHT = config.GAME_HEADER_LABEL_HEIGHT;
+    var ICON_WIDTH = config.ICON_WIDTH;
+    var ICON_MARGIN = config.ICON_MARGIN;
+    var CALLOUT_Z = config.CALLOUT_Z;
 
     // platform
-    var PLATFORM_COLUMNS = 6;
-    var PLATFORM_HEIGHT = 50;
-    var PLATFORM_EXTRA = 50;
-    var ENTRY_SEARCH_BUTTON_WIDTH = 100;
-    var PLATFORM_HEADER_HEIGHT = PLATFORM_HEIGHT + (2 * 30);
-    var PLATFORM_DIALOG_WIDTH = 800;
-    var PLATFORM_MARGIN = 15;
-    var CALLOUT_RATIO = 1.6;
-    var PLATFORM_INNER_WIDTH = PLATFORM_DIALOG_WIDTH - PLATFORM_MARGIN * 2;
+    var PLATFORM_COLUMNS = config.PLATFORM_COLUMNS;
+    var PLATFORM_HEIGHT = config.PLATFORM_HEIGHT;
+    var PLATFORM_EXTRA = config.PLATFORM_EXTRA;
+    var ENTRY_SEARCH_BUTTON_WIDTH = config.ENTRY_SEARCH_BUTTON_WIDTH;
+    var PLATFORM_HEADER_HEIGHT = config.PLATFORM_HEADER_HEIGHT;
+    var PLATFORM_DIALOG_WIDTH = config.PLATFORM_DIALOG_WIDTH;
+    var PLATFORM_MARGIN = config.PLATFORM_MARGIN;
+    var CALLOUT_RATIO = config.CALLOUT_RATIO;
+    var PLATFORM_INNER_WIDTH = config.PLATFORM_INNER_WIDTH;
     var platformDialogContainer;
     var platformGridContainer;
     var platformParent;
@@ -68,7 +71,7 @@ define(function (require, exports, module) {
     var _platformContent = _.template('<h3><%= abbreviation %></h3><p><%= name %></p>');
     var _filterText = _.template('platform: <i><% if (platform){ %><%= platform.name %><span id="clear-platform">&times;</span><% } else { %>ALL<% } %></i>');
     var _statusTemplate = _.template('<%= found %> of <%= results %> retrieved <% if (active != found ){ %>(<%= active %> filtered records shown)<% } %>');
-    var _gameHeader = _.template('<h1><%= name %> (<%= original_release_date ? new Date(original_release_date).getFullYear()  : "?" %>)</h1>'// +
+    var _gameHeader = _.template('<h1><%= name %></h1><h2><%= original_release_date ? new Date(original_release_date).getFullYear()  : "?" %></h2>'// +
         //   '<ul class="platforms"><% _.each(platforms, function(platform){ %><li><%= platform.abbreviation %></li><% }) %></ul>'
     );
     var _calloutPlatformsTemplate = _.template('<% if (platforms) { platforms.forEach(function(p, i){ %><% if (i) { %><span class="callout-platform-bullet"> &bull;</span> <% } %><div class="platform-callout-platform"><%= p.name %></div><%})} %>');
@@ -91,6 +94,7 @@ define(function (require, exports, module) {
     var gameCalloutInfoCloseButton;
     var gameViewLock = false;
     var gameViewLockRow;
+    var lhnModifier;
 
     // state values
     var searchChangeDelay;
@@ -101,13 +105,17 @@ define(function (require, exports, module) {
     var hoverQueue = {};
     var totalGames = 0;
     var foundGames = [];
+    var searchText = '';
+    var firstLoad = true;
 
     //main elements
-    var mainContext = Engine.createContext();
+    var mainContext = config.context;
     var footerSurface;
     var mainContentNode;
     var mainSurface;
     var filterLabelSurface;
+    var sceneBox;
+    var initPromptMod;
 
     mainContext.setPerspective(800);
     var platform = null;
@@ -212,21 +220,11 @@ define(function (require, exports, module) {
         updateStatus(data, activeGames);
     }
 
-    function remainingWidth() {
-        var args = _.toArray(arguments);
-        return Math.max(0, _.reduce(args, function (o, a) {
-            return o - a;
-        }, window.innerWidth));
-    }
-
-    function remainingHeight() {
-        var args = _.toArray(arguments);
-        return Math.max(0, _.reduce(args, function (o, a) {
-            return o - a;
-        }, window.innerHeight));
-    }
-
     function updateGameList(text) {
+        if (initPromptMod._output.opacity){
+            initPromptMod.halt();
+            initPromptMod.setOpacity(0, {duration: 2000, easing: Easing.outExpo});
+        }
         searchChangeDelay = null;
         platform = null;
         mainSurface.setContent('<p>Searching for &quot;' + text + '&quot; -- please wait</p>');
@@ -284,6 +282,13 @@ define(function (require, exports, module) {
             }
 
             _expandList(data);
+
+            lhnModifier.setTransform(
+                Transform.translate(0, ENTRY_HEIGHT),
+                { curve: Easing.outExpo, duration: 300}
+            );
+
+            lhnModifier.setOpacity(1, { curve: _.identity, duration: 1000});
         });
 
     }
@@ -292,8 +297,8 @@ define(function (require, exports, module) {
         if (!scale) {
             scale = 1;
         }
-        var width = remainingWidth(GAME_ROW_NAME_WIDTH, GAME_ROW_ITEM_PLATFORM_WIDTH, GAME_ROW_ITEM_DATE_WIDTH);
-        var maxHeight = remainingHeight(HEADER_HEIGHT, FOOTER_HEIGHT);
+        var width = config.remainingWidth(GAME_ROW_NAME_WIDTH, GAME_ROW_ITEM_PLATFORM_WIDTH, GAME_ROW_ITEM_DATE_WIDTH);
+        var maxHeight = config.remainingHeight(HEADER_HEIGHT, FOOTER_HEIGHT);
         var height = CALLOUT_RATIO * width;
         if (height > maxHeight) {
             height = maxHeight;
@@ -348,22 +353,24 @@ define(function (require, exports, module) {
             size: [undefined, 60],
             classes: ['callout-platform']
         });
-        gameCalloutNode.add(new Modifier({origin: [0, 1]})).add(gameCalloutPlatforms);
+        gameCalloutNode.add(new Modifier({
+            origin: [0, 1]
+        })).add(gameCalloutPlatforms);
 
         gameCalloutInfoButton = new Surface({
-            content: '<button class="button info-button info-close-button description-button">Description</button>',
-            size: [130, 40], properties: {
+            content: 'Description',
+            size: [150, 30],
+            properties: {
                 display: 'none'
-            }
+            },
+            classes: ['button', 'info-button', 'info-close-button', 'description-button'],
+            elementType: 'button'
         });
-        gameCalloutInfoButton.on('deploy', function () {
-            var element = this._currTarget.getElementsByClassName('description-button')[0];
-            element.addEventListener('click', function () {
-                gameCalloutText.setProperties({display: 'block'});
-                gameCalloutInfoCloseButton.setProperties({display: 'block'});
-                gameCalloutPlatforms.setProperties({display: 'none'});
-                gameCalloutInfoButton.setProperties({display: 'none'});
-            });
+        gameCalloutInfoButton.on('click', function () {
+            gameCalloutText.setProperties({display: 'block'});
+            gameCalloutInfoCloseButton.setProperties({display: 'block'});
+            gameCalloutPlatforms.setProperties({display: 'none'});
+            gameCalloutInfoButton.setProperties({display: 'none'});
         });
 
         gameCalloutInfoCloseButton = new Surface({
@@ -384,7 +391,8 @@ define(function (require, exports, module) {
         });
 
         gameCalloutNode.add(new Modifier({
-            origin: [1, 1]
+            origin: [1, 1],
+            transform: Transform.translate(-10, -10)
         })).add(gameCalloutInfoButton);
 
         gameCalloutNode.add(new Modifier({
@@ -402,7 +410,6 @@ define(function (require, exports, module) {
         gameCalloutNode.add(new Modifier({size: [undefined, 150]})).add(gameCalloutTitle);
     }
 
-    var firstLoad = true;
     function highlightGame(game) {
 
         if (gameViewLock) {
@@ -417,7 +424,7 @@ define(function (require, exports, module) {
                 gameCalloutImage.setProperties({display: 'none'});
             }
 
-            if (firstLoad){
+            if (firstLoad) {
                 gameCalloutInfoButton.setProperties({display: 'block'});
                 firstLoad = false;
             }
@@ -434,12 +441,7 @@ define(function (require, exports, module) {
 
     function gamePlatformTiles() {
 
-        var gamePlatforms = _.compact(_.flatten(_.pluck(foundGames, 'platforms')));
-        gamePlatforms = _.groupBy(gamePlatforms, 'name');
-        gamePlatforms = _.map(_.values(gamePlatforms), function (pList) {
-            return pList[0];
-        });
-        gamePlatforms = _.sortBy(gamePlatforms, 'abbreviation');
+        gamePlatforms = Platform.gamesToPlatforms(games);
 
         return _.map(gamePlatforms, function (platform) {
             var platformSurface = new Surface({
@@ -562,7 +564,7 @@ define(function (require, exports, module) {
     }
 
     function sizeEntrySurface() {
-        var size = [remainingWidth(2 * ENTRY_MARGIN), 50];
+        var size = [config.remainingWidth(2 * ENTRY_MARGIN), 50];
         entrySurface.setSize(size);
         listContainer.setSize([undefined, getListHeight()]);
     }
@@ -595,7 +597,7 @@ define(function (require, exports, module) {
 
         filterLabelSurface = new Surface({
             content: 'filter text',
-            size: [remainingWidth(ENTRY_LABEL_SIZE, ENTRY_SEARCH_BUTTON_WIDTH, 2 * ENTRY_MARGIN), ENTRY_ROW_HEIGHT],
+            size: [config.remainingWidth(ENTRY_LABEL_SIZE, ENTRY_SEARCH_BUTTON_WIDTH, 2 * ENTRY_MARGIN), ENTRY_ROW_HEIGHT],
             classes: ['filter-label']
         });
         filterLabelSurface.on('deploy', function () {
@@ -626,15 +628,14 @@ define(function (require, exports, module) {
         searchButton.on('deploy', function () {
             document.getElementById('search-button').addEventListener('click', function () {
                 filterLabelSurface.setContent("Loading results --- please wait");
-                var text = document.getElementById('search-input').value;
-                console.log('text:', text);
+                searchText = document.getElementById('search-input').value;
 
                 if (searchChangeDelay) {
                     clearTimeout(searchChangeDelay);
                 }
 
                 searchChangeDelay = _.delay(
-                    updateGameList, 800, text);
+                    updateGameList, 800, searchText);
 
             })
         });
@@ -672,7 +673,8 @@ define(function (require, exports, module) {
             .add(listContainer);
 
         listHeaderNode = new RenderNode();
-        mainContentNode.add(new Modifier({transform: Transform.translate(0, ENTRY_HEIGHT)})).add(listHeaderNode);
+        lhnModifier = new Modifier({opacity: 0, transform: Transform.thenMove(Transform.rotateX(Math.PI / 2), [0, ENTRY_HEIGHT]) });
+        mainContentNode.add(lhnModifier).add(listHeaderNode);
 
         listHeaderCS = new ContainerSurface({
             size: [undefined, GAME_HEADER_HEIGHT],
@@ -733,6 +735,14 @@ define(function (require, exports, module) {
             setSortKey('released');
         });
 
+        var timelineButton = new Surface({
+            size: [150, GAME_HEADER_HEIGHT - (2 * 4)],
+            content: 'View Timeline',
+            classes: ['button', 'info-button', 'icon-button']
+        });
+
+        timelineButton.on('click', viewTimeline);
+
         listHeaderNode.add(listHeaderCS);
         listHeaderCS.add(new Modifier({
             origin: [0, 0.5]
@@ -742,8 +752,21 @@ define(function (require, exports, module) {
         listHeaderCS.add(new Modifier({
             origin: [0, 0.5], transform: Transform.translate(GAME_ROW_NAME_WIDTH + GAME_ROW_ITEM_PLATFORM_WIDTH, 0)}))
             .add(releasedLabel);
+
+        listHeaderCS.add(new Modifier({
+            origin: [0, 0.5],
+            transform: Transform.translate(GAME_ROW_NAME_WIDTH + GAME_ROW_ITEM_PLATFORM_WIDTH + GAME_ROW_ITEM_DATE_WIDTH, 0)
+        })).add(timelineButton);
     }
 
+    function viewTimeline() {
+        var timeline = new Timeline(searchText, foundGames);
+        sceneBox.show(timeline, {duration: 0, easing: function(){ return 1}});
+    }
+
+    /**
+     * this is the "root" layout for this view
+     */
     function initLayout() {
         mainContext.on('game filter update', function () {
             if (!filterLabelSurface) {
@@ -772,13 +795,22 @@ define(function (require, exports, module) {
 
         mainSurface = new Surface({
             size: [undefined, undefined],
-            content: "<p>Welcome to GameGalaxy: a GiantBomb data explorer</p>" +
-                "<p>Type a phrase in the field above to begin</p>",
             classes: ["main"],
             origin: [0, 0.5]
         });
-
         layout.content.add(mainSurface);
+
+        initPromptMod = new Modifier({
+            origin: [0, 0.25]
+        });
+
+        layout.content.add(initPromptMod)
+            .add(
+            new Surface({
+                size: [undefined, true],
+                content:   "Type a phrase in the field above to begin", elementType: 'p'})
+        );
+
 
         mainContentNode = new RenderNode({
         });
@@ -800,7 +832,10 @@ define(function (require, exports, module) {
         });
         layout.footer.add(footerSurface);
 
-        mainContext.add(layout);
+        sceneBox = new Lightbox({});
+        sceneBox.show(layout, {duration: 0});
+
+        mainContext.add(sceneBox);
 
         mainContext.on('resize', sizeEntrySurface);
     }

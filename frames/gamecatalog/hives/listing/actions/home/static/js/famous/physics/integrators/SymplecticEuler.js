@@ -28,12 +28,12 @@ define(function(require, exports, module) {
      * @constructor
      * @param {Object} options Options to set
      */
-    function SymplecticEuler(options){
+    function SymplecticEuler(options) {
         this.options = Object.create(SymplecticEuler.DEFAULT_OPTIONS);
         this._optionsManager = new OptionsManager(this.options);
 
         if (options) this.setOptions(options);
-    };
+    }
 
     /**
      * @property SymplecticEuler.DEFAULT_OPTIONS
@@ -48,19 +48,17 @@ define(function(require, exports, module) {
          *      Range : [0, Infinity]
          * @attribute velocityCap
          * @type Number
-         * @default Infinity
          */
 
-        velocityCap : Infinity,
+        velocityCap : undefined,
 
         /**
          * The maximum angular velocity of a physics body
          *      Range : [0, Infinity]
          * @attribute angularVelocityCap
          * @type Number
-         * @default Infinity
          */
-        angularVelocityCap : Infinity
+        angularVelocityCap : undefined
     };
 
     /*
@@ -69,7 +67,7 @@ define(function(require, exports, module) {
      * @method setOptions
      * @param {Object} options
      */
-    SymplecticEuler.prototype.setOptions = function(options){
+    SymplecticEuler.prototype.setOptions = function setOptions(options) {
         this._optionsManager.patch(options);
     };
 
@@ -79,7 +77,7 @@ define(function(require, exports, module) {
      * @method getOptions
      * @return {Object} options
      */
-    SymplecticEuler.prototype.getOptions = function() {
+    SymplecticEuler.prototype.getOptions = function getOptions() {
         return this._optionsManager.value();
     };
 
@@ -91,14 +89,14 @@ define(function(require, exports, module) {
      * @param {Body} physics body
      * @param {Number} dt delta time
      */
-    SymplecticEuler.prototype.integrateVelocity = function(body, dt){
-        var v = body.velocity,
-            w = body.inverseMass,
-            f = body.force;
+    SymplecticEuler.prototype.integrateVelocity = function integrateVelocity(body, dt) {
+        var v = body.velocity;
+        var w = body.inverseMass;
+        var f = body.force;
 
         if (f.isZero()) return;
 
-        body.setVelocity(v.add(f.mult(dt * w)));
+        v.add(f.mult(dt * w)).put(v);
         f.clear();
     };
 
@@ -110,14 +108,12 @@ define(function(require, exports, module) {
      * @param {Body} physics body
      * @param {Number} dt delta time
      */
-    SymplecticEuler.prototype.integratePosition = function(body, dt){
-        var p = body.position,
-            v = body.velocity;
+    SymplecticEuler.prototype.integratePosition = function integratePosition(body, dt) {
+        var p = body.position;
+        var v = body.velocity;
 
-        if (v.isZero()) return;
-
-        if (this.options.velocityCap) v.set(v.cap(this.options.velocityCap));
-        p.set(p.add(v.mult(dt)));
+        if (this.options.velocityCap) v.cap(this.options.velocityCap).put(v);
+        p.add(v.mult(dt)).put(p);
     };
 
     /*
@@ -128,13 +124,13 @@ define(function(require, exports, module) {
      * @param {Body} physics body (except a particle)
      * @param {Number} dt delta time
      */
-    SymplecticEuler.prototype.integrateAngularMomentum = function(body, dt){
-        var L = body.angularMomentum,
-            t = body.torque;
+    SymplecticEuler.prototype.integrateAngularMomentum = function integrateAngularMomentum(body, dt) {
+        var L = body.angularMomentum;
+        var t = body.torque;
 
         if (t.isZero()) return;
 
-        if (this.options.angularVelocityCap) t.set(t.cap(this.options.angularVelocityCap));
+        if (this.options.angularVelocityCap) t.cap(this.options.angularVelocityCap).put(t);
         L.add(t.mult(dt)).put(L);
         t.clear();
     };
@@ -147,13 +143,13 @@ define(function(require, exports, module) {
      * @param {Body} physics body (except a particle)
      * @param {Number} dt delta time
      */
-    SymplecticEuler.prototype.integrateOrientation = function(body, dt){
-        var q = body.orientation,
-            w = body.angularVelocity;
+    SymplecticEuler.prototype.integrateOrientation = function integrateOrientation(body, dt) {
+        var q = body.orientation;
+        var w = body.angularVelocity;
 
         if (w.isZero()) return;
-        q.set(q.add(q.multiply(w).scalarMultiply(0.5 * dt)));
-        q.set(q.normalize());
+        q.add(q.multiply(w).scalarMultiply(0.5 * dt)).put(q);
+//        q.normalize.put(q);
     };
 
     module.exports = SymplecticEuler;

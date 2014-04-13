@@ -9,14 +9,14 @@
 
 define(function(require, exports, module) {
 
-
     /**
      * Internal helper object to Context that handles the process of
-     * creating and allocating DOM elements within a managed div.
-     *   (This should only be called by the engine.)
+     *   creating and allocating DOM elements within a managed div.
+     *   Private.
      *
      * @class ElementAllocator
      * @constructor
+     * @private
      * @param {Node} container document element in which Famo.us content will be inserted
      */
     function ElementAllocator(container) {
@@ -76,7 +76,7 @@ define(function(require, exports, module) {
     };
 
     /**
-     * Allocate an element of specified type from the pool.
+     * De-allocate an element of specified type to the pool.
      *
      * @private
      * @method deallocate

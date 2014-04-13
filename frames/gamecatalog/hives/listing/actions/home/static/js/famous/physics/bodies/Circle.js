@@ -5,8 +5,6 @@
  * Owner: david@famo.us
  * @license MPL 2.0
  * @copyright Famous Industries, Inc. 2014
- * @license MPL 2.0
- * @copyright Famous Industries, Inc. 2014
  */
 
 define(function(require, exports, module) {
@@ -14,39 +12,34 @@ define(function(require, exports, module) {
     var Matrix = require('famous/math/Matrix');
 
     /**
-     * @class An elemental circle-shaped Body in the physics engine.
+     * Implements a circle, or spherical, geometry for an Body with
+     * radius.
      *
-     * @description This is a region defined by a radius.
-     *    Its size is the dimension of the bounding square.
-     *
-     *
-     * * Class/Namespace TODOs
-     *
-     * * opts:
-     *    * r: radius
-     *    * inherited opts from: {@link Body}.
-     *
-     * @name Circle
+     * @class Circle
      * @extends Body
      * @constructor
-     * @example TODO
      */
-    function Circle(options){
+    function Circle(options) {
         options = options || {};
         this.setRadius(options.radius || 0);
         Body.call(this, options);
-    };
+    }
 
     Circle.prototype = Object.create(Body.prototype);
     Circle.prototype.constructor = Circle;
 
-    Circle.prototype.setRadius = function(r){
+    /**
+     * Basic setter for radius.
+     * @method setRadius
+     * @param r {Number} radius
+     */
+    Circle.prototype.setRadius = function setRadius(r) {
         this.radius = r;
         this.size = [2*this.radius, 2*this.radius];
         this.setMomentsOfInertia();
     };
 
-    Circle.prototype.setMomentsOfInertia = function(){
+    Circle.prototype.setMomentsOfInertia = function setMomentsOfInertia() {
         var m = this.mass;
         var r = this.radius;
 
@@ -61,8 +54,6 @@ define(function(require, exports, module) {
             [0, 4 / (m * r * r), 0],
             [0, 0, 2 / (m * r * r)]
         ]);
-
-        this.inverseInertiaTranspose = this.inverseInertia.clone();
     };
 
     module.exports = Circle;

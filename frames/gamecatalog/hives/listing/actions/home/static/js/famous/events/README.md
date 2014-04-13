@@ -1,23 +1,42 @@
------------------------------------
 Events: Famous eventing libraries
------------------------------------
+=================================
 
-Events are used for communication between objects in Famo.us.  Famous implements an event interface similar to that used in node.js.
-
-# Files
-- EventArbiter.js: A switch which wraps several event destinations and redirects received events to at most one of them.
-- EventFilter.js: EventFilter regulates the broadcasting of events based on a specified condition.
-- EventMapper.js: EventMapper routes events to various event destinations based on custom logic.
-
-# Documentation
-- launch.famo.us/docs/current/events
-- https://github.com/Famous/internal/wiki/Reference--Guide:--Events (TODO: Move off of interanl wiki when finished)
-    - Note: This is in docs/ in this folder
-- https://github.com/Famous/internal/wiki/Core-Concepts (TODO: move off of internal wiki when finished)
-- https://github.com/Famous/internal/wiki/Core-Interfaces  (TODO: move off of internal wiki when finished)
-- https://github.com/Famous/internal/wiki/How-Famous-Works (TODO: move off of internal wiki when finished)
+Events are used for communication between objects in Famous.  Famo.us implements
+an event interface similar to that used in NodeJS.
 
 
-# Owners/Committers
-- mark@famo.us
+## Files
+
+- EventArbiter.js: A switch which wraps several event destinations and redirects
+  received events to at most one of them.
+- EventFilter.js: EventFilter regulates the broadcasting of events based on a
+  specified condition.
+- EventMapper.js: EventMapper routes events to various event destinations based
+  on custom logic.
+
+
+## Documentation
+
+- [Reference Docs][reference-documentation]
+- [Events][events]
+- [Pitfalls][pitfalls]
+
+
+## Maintainer
+
+- David Valdman <david@famo.us>
+
+
+## License
+
+Copyright (c) 2014 Famous Industries, Inc.
+
+This Source Code Form is subject to the terms of the Mozilla Public License,
+v. 2.0. If a copy of the MPL was not distributed with this file, You can obtain
+one at http://mozilla.org/MPL/2.0/.
+
+
+[reference-documentation]: http://famo.us/docs
+[events]: http://famo.us/guides/dev/events.html
+[pitfalls]: http://famo.us/guides/dev/pitfalls.html
 

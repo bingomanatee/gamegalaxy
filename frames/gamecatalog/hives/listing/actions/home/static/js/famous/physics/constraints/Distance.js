@@ -15,12 +15,13 @@ define(function(require, exports, module) {
      *  A constraint that keeps a physics body a given distance away from a given
      *  anchor, or another attached body.
      *
+     *
      *  @class Distance
      *  @constructor
      *  @extends Constraint
      *  @param options {Object}
      */
-    function Distance(options){
+    function Distance(options) {
         this.options = Object.create(this.constructor.DEFAULT_OPTIONS);
         if (options) this.setOptions(options);
 
@@ -31,7 +32,7 @@ define(function(require, exports, module) {
         this.diffV    = new Vector();
 
         Constraint.call(this);
-    };
+    }
 
     Distance.prototype = Object.create(Constraint.prototype);
     Distance.prototype.constructor = Distance;
@@ -97,8 +98,8 @@ define(function(require, exports, module) {
      * @method setOptions
      * @param options {Objects}
      */
-    Distance.prototype.setOptions = function(options){
-        if (options.anchor){
+    Distance.prototype.setOptions = function setOptions(options) {
+        if (options.anchor) {
             if (options.anchor.position instanceof Vector) this.options.anchor = options.anchor.position;
             if (options.anchor   instanceof Vector)  this.options.anchor = options.anchor;
             if (options.anchor   instanceof Array)  this.options.anchor = new Vector(options.anchor);
@@ -109,9 +110,9 @@ define(function(require, exports, module) {
         if (options.minLength !== undefined) this.options.minLength = options.minLength;
     };
 
-    function _calcError(impulse, body){
+    function _calcError(impulse, body) {
         return body.mass * impulse.norm();
-    };
+    }
 
     /**
      * Set the anchor position
@@ -119,7 +120,7 @@ define(function(require, exports, module) {
      * @method setOptions
      * @param anchor {Array}
      */
-    Distance.prototype.setAnchor = function(anchor){
+    Distance.prototype.setAnchor = function setAnchor(anchor) {
         if (!this.options.anchor) this.options.anchor = new Vector();
         this.options.anchor.set(anchor);
     };
@@ -132,7 +133,7 @@ define(function(require, exports, module) {
      * @param source {Body}         The source of the constraint
      * @param dt {Number}           Delta time
      */
-    Distance.prototype.applyConstraint = function(targets, source, dt){
+    Distance.prototype.applyConstraint = function applyConstraint(targets, source, dt) {
         var n        = this.normal;
         var diffP    = this.diffP;
         var diffV    = this.diffV;
@@ -143,19 +144,19 @@ define(function(require, exports, module) {
         var period       = options.period;
         var minLength    = options.minLength;
 
-        if (source){
+        if (source) {
             var p2 = source.position;
             var w2 = source.inverseMass;
             var v2 = source.velocity;
         }
-        else{
+        else {
             var p2 = this.options.anchor;
             var w2 = 0;
-        };
+        }
 
         var length = this.options.length;
 
-        for (var i = 0; i < targets.length; i++){
+        for (var i = 0; i < targets.length; i++) {
             var body = targets[i];
 
             var v1 = body.velocity;
@@ -170,22 +171,22 @@ define(function(require, exports, module) {
             //rope effect
             if (Math.abs(dist) < minLength) return;
 
-            if (source) diffV.set(v1.sub(v2))
+            if (source) diffV.set(v1.sub(v2));
             else        diffV.set(v1);
 
             var effMass = 1 / (w1 + w2);
 
-            if (period === 0){
+            if (period === 0) {
                 var gamma = 0;
                 var beta  = 1;
             }
-            else{
+            else {
                 var c = 4 * effMass * pi * dampingRatio / period;
                 var k = 4 * effMass * pi * pi / (period * period);
 
                 var gamma = 1 / (c + dt*k);
                 var beta  = dt*k / (c + dt*k);
-            };
+            }
 
             var antiDrift = beta/dt * dist;
             var lambda    = -(n.dot(diffV) + antiDrift) / (gamma + dt/effMass);
@@ -194,7 +195,7 @@ define(function(require, exports, module) {
             body.applyImpulse(impulse);
 
             if (source) source.applyImpulse(impulse.mult(-1));
-        };
+        }
     };
 
     module.exports = Distance;

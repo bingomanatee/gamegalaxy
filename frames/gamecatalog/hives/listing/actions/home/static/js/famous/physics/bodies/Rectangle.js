@@ -5,44 +5,40 @@
  * Owner: david@famo.us
  * @license MPL 2.0
  * @copyright Famous Industries, Inc. 2014
- * @license MPL 2.0
- * @copyright Famous Industries, Inc. 2014
  */
 
 define(function(require, exports, module) {
     var Body = require('./Body');
     var Matrix = require('famous/math/Matrix');
-    /*
-     * @class An elemental rectangle-shaped Body in the physics engine.
+
+    /**
+     * Implements a rectangular geometry for an Body with
+     * size = [width, height].
      *
-     * @description This is a region defined by a 2D box.
-     *
-     * * Class/Namespace TODOs
-     *
-     * * opts:
-     *   * size: ([height, width]) array
-     *   * inherited opts from: {@link Body}.
-     *
-     * @name Rectangle
+     * @class Circle
      * @extends Body
-     * @example TODO
      * @constructor
      */
-    function Rectangle(options){
+    function Rectangle(options) {
         options = options || {};
         this.size = options.size || [0,0];
         Body.call(this, options);
-    };
+    }
 
     Rectangle.prototype = Object.create(Body.prototype);
     Rectangle.prototype.constructor = Rectangle;
 
-    Rectangle.prototype.setSize = function(size){
+    /**
+     * Basic setter for size.
+     * @method setSize
+     * @param size {Array} size = [width, height]
+     */
+    Rectangle.prototype.setSize = function setSize(size) {
         this.size = size;
         this.setMomentsOfInertia();
     };
 
-    Rectangle.prototype.setMomentsOfInertia = function(){
+    Rectangle.prototype.setMomentsOfInertia = function setMomentsOfInertia() {
         var m = this.mass;
         var w = this.size[0];
         var h = this.size[1];
@@ -58,8 +54,6 @@ define(function(require, exports, module) {
             [0, 12 / (m * w * w), 0],
             [0, 0, 12 / (m * (w * w + h * h))]
         ]);
-
-        this.inertiaInverseTranspose = this.inverseInertia.clone();
     };
 
     module.exports = Rectangle;

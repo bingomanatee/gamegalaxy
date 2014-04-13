@@ -8,62 +8,32 @@
  */
 
 define(function(require, exports, module) {
-    var FTT = require('./TouchTracker');
-    var FEH = require('famous/core/EventHandler');
+    var TouchTracker = require('./TouchTracker');
+    var EventHandler = require('famous/core/EventHandler');
 
     /**
-     * @class Handles piped in touch events. On update it outputs an
-     *        object with position, velocity, acceleration, and touch id. On end
-     *        it outputs an object with position, velocity, count, and touch id.
-     * @description
-     * @name TouchSync
+     * Handles piped in touch events. Emits 'start', 'update', and 'events'
+     *   events with position, velocity, acceleration, and touch id.
+     *   Useful for dealing with inputs on touch devices.
+     *
+     *
+     * @class TouchSync
      * @constructor
-     * @example
-     * define(function(require, exports, module) {
-     *     var Engine = require('famous/core/Engine');
-     *     var Surface = require('famous/core/Surface');
-     *     var Modifier = require('famous/core/Modifier');
-     *     var FM = require('famous/core/Matrix');
-     *     var TouchSync = require('famous/input/TouchSync');
-     *     var Context = Engine.createContext();
-     *
-     *     var surface = new Surface({
-     *         size: [200,200],
-     *         properties: {
-     *             backgroundColor: 'red'
-     *         }
-     *     });
-     *
-     *     var modifier = new Modifier({
-     *         transform: undefined
-     *     });
-     *
-     *     var position = 0;
-     *     var sync = new TouchSync(function(){
-     *         return position;
-     *     }, {direction: TouchSync.DIRECTION_Y});
-     *
-     *     surface.pipe(sync);
-     *     sync.on('update', function(data) {
-     *         var edge = window.innerHeight - (surface.getSize()[1])
-     *         if (data.p > edge) {
-     *             position = edge;
-     *         } else if (data.p < 0) {
-     *             position = 0;
-     *         } else {
-     *             position = data.p;
-     *         }
-     *         modifier.setTransform(FM.translate(0, position, 0));
-     *         surface.setContent('position' + position + '<br>' + 'velocity' + data.v.toFixed(2));
-     *     });
-     *     Context.link(modifier).link(surface);
-     * });
+     * @param {function} legacyGetter position getter function (deprecated)
+     * @param {Object} options default options overrides
      */
-    function TouchSync(targetGet, options) {
-        this.targetGet = targetGet || null;
+    function TouchSync(legacyGetter, options) {
+        if (arguments.length === 2){
+            this._legacyPositionGetter = arguments[0];
+            options = arguments[1];
+        }
+        else {
+            this._legacyPositionGetter = null;
+            options = arguments[0];
+        }
 
-        this.output = new FEH();
-        this.touchTracker = new FTT();
+        this.output = new EventHandler();
+        this.touchTracker = new TouchTracker();
 
         this.options = {
             direction: undefined,
@@ -71,24 +41,52 @@ define(function(require, exports, module) {
             scale: 1
         };
 
+        this._payload = {
+            delta    : null,
+            position : null,
+            velocity : null,
+            clientX  : undefined,
+            clientY  : undefined,
+            count    : 0,
+            touch    : undefined
+        };
+
         if (options) this.setOptions(options);
         else this.setOptions(this.options);
 
-        FEH.setOutputHandler(this, this.output);
-        FEH.setInputHandler(this, this.touchTracker);
+        EventHandler.setOutputHandler(this, this.output);
+        EventHandler.setInputHandler(this, this.touchTracker);
 
         this.touchTracker.on('trackstart', _handleStart.bind(this));
         this.touchTracker.on('trackmove', _handleMove.bind(this));
         this.touchTracker.on('trackend', _handleEnd.bind(this));
     }
 
-    /** @const */ TouchSync.DIRECTION_X = 0;
-    /** @const */ TouchSync.DIRECTION_Y = 1;
+    TouchSync.DIRECTION_X = 0;
+    TouchSync.DIRECTION_Y = 1;
 
-    function _handleStart(data) {
-        this.output.emit('start', {count: data.count, touch: data.touch.identifier});
+    function _clearPayload() {
+        var payload = this._payload;
+        payload.position = null;
+        payload.velocity = null;
+        payload.clientX  = undefined;
+        payload.clientY  = undefined;
+        payload.count    = undefined;
+        payload.touch    = undefined;
     }
 
+    // handle 'trackstart'
+    function _handleStart(data) {
+        _clearPayload.call(this);
+
+        var payload = this._payload;
+        payload.count = data.count;
+        payload.touch = data.identifier;
+
+        this.output.emit('start', payload);
+    }
+
+    // handle 'trackmove'
     function _handleMove(data) {
         var history = data.history;
         var prevTime = history[history.length - 2].timestamp;
@@ -106,52 +104,51 @@ define(function(require, exports, module) {
 
         var diffTime = Math.max(currTime - prevTime, 8); // minimum tick time
 
-        var accelX = 0;
-        var accelY = 0;
         var velX = diffX / diffTime;
         var velY = diffY / diffTime;
 
-        //DV edits to send acceleration and velocity
-        if (history.length > 2) {
-            var prevprevTouch = history[history.length - 3].touch;
-            accelX = (currTouch.pageX - 2 * prevTouch.pageX + prevprevTouch.pageX) / (diffTime * diffTime);
-            accelY = (currTouch.pageY - 2 * prevTouch.pageY + prevprevTouch.pageY) / (diffTime * diffTime);
-        }
-
-        var prevPos = this.targetGet ? this.targetGet() : 0;
         var scale = this.options.scale;
+        var prevPos;
         var nextPos;
         var nextVel;
-        var nextAccel;
+        var nextDelta;
+
         if (this.options.direction === TouchSync.DIRECTION_X) {
-            nextPos = prevPos + scale * diffX;
+            prevPos = this._legacyPositionGetter ? this._legacyPositionGetter() : 0;
+            nextDelta = scale * diffX;
+            nextPos = prevPos + nextDelta;
             nextVel = scale * velX;
-            nextAccel = scale * velY;
         }
         else if (this.options.direction === TouchSync.DIRECTION_Y) {
-            nextPos = prevPos + scale * diffY;
+            prevPos = this._legacyPositionGetter ? this._legacyPositionGetter() : 0;
+            nextDelta = scale * diffY;
+            nextPos = prevPos + nextDelta;
             nextVel = scale * velY;
-            nextAccel = scale * accelY;
         }
         else {
-            nextPos = [prevPos[0] + scale * diffX, prevPos[1] + scale * diffY];
+            prevPos = this._legacyPositionGetter ? this._legacyPositionGetter() : [0,0];
+            nextDelta = [scale * diffX, scale * diffY];
+            nextPos = [prevPos[0] + nextDelta[0], prevPos[1] + nextDelta[1]];
             nextVel = [scale * velX, scale * velY];
-            nextAccel = [scale * accelX, scale * accelY];
         }
 
-        this.output.emit('update', {
-            p: nextPos,
-            v: nextVel,
-            a: nextAccel,
-            touch: data.touch.identifier
-        });
+        var payload = this._payload;
+        payload.delta    = nextDelta;
+        payload.position = nextPos;
+        payload.velocity = nextVel;
+        payload.clientX  = data.touch.clientX;
+        payload.clientY  = data.touch.clientY;
+        payload.count    = data.count;
+        payload.touch    = data.touch.identifier;
+
+        this.output.emit('update', payload);
     }
 
+    // handle 'trackend'
     function _handleEnd(data) {
         var nextVel = (this.options.direction !== undefined) ? 0 : [0, 0];
         var history = data.history;
         var count = data.count;
-        var pos = this.targetGet ? this.targetGet() : 0;
         if (history.length > 1) {
             var prevTime = history[history.length - 2].timestamp;
             var currTime = history[history.length - 1].timestamp;
@@ -174,15 +171,40 @@ define(function(require, exports, module) {
             else if (this.options.direction === TouchSync.DIRECTION_Y) nextVel = scale * velY;
             else nextVel = [scale * velX, scale * velY];
         }
-        this.output.emit('end', {p: pos, v: nextVel, count: count, touch: data.touch.identifier});
+
+        var payload = this._payload;
+        payload.velocity = nextVel;
+        payload.clientX  = data.clientX;
+        payload.clientY  = data.clientY;
+        payload.count    = count;
+        payload.touch    = data.touch.identifier;
+
+        this.output.emit('end', payload);
     }
 
+    /**
+     * Set internal options, overriding any default options
+     *
+     * @method setOptions
+     *
+     * @param {Object} [options] overrides of default options
+     * @param {Number} [options.rails] whether to constrain to nearest axis.
+     * @param {Number} [options.direction] TouchSync.DIRECTION_X, DIRECTION_Y -
+     *    pay attention to one specific direction.
+     * @param {Number} [options.scale] constant factor to scale velocity output
+     */
     TouchSync.prototype.setOptions = function setOptions(options) {
         if (options.direction !== undefined) this.options.direction = options.direction;
         if (options.rails !== undefined) this.options.rails = options.rails;
         if (options.scale !== undefined) this.options.scale = options.scale;
     };
 
+    /**
+     * Return entire options dictionary, including defaults.
+     *
+     * @method getOptions
+     * @return {Object} configuration options
+     */
     TouchSync.prototype.getOptions = function getOptions() {
         return this.options;
     };

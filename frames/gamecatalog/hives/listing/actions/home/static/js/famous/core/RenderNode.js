@@ -36,8 +36,9 @@ define(function(require, exports, module) {
     }
 
     /**
-     * Append a renderable to its list of this node's children.
-     * Note: Does not double-wrap if child is a RenderNode.
+     * Append a renderable to the list of this node's children.
+     *   This produces a new RenderNode in the tree.
+     *   Note: Does not double-wrap if child is a RenderNode already.
      *
      * @method add
      * @param {Object} child renderable object
@@ -56,9 +57,8 @@ define(function(require, exports, module) {
         return childNode;
     };
 
-
     /**
-     * Return wrapped object.  Returns null if this node has multiple child nodes.
+     * Return the single wrapped object.  Returns null if this node has multiple child nodes.
      *
      * @method get
      *
@@ -73,23 +73,17 @@ define(function(require, exports, module) {
      *
      * @method set
      * @param {Object} child renderable object
-     * @return {RenderNode} this render node
+     * @return {RenderNode} this render node, or child if it is a RenderNode
      */
     RenderNode.prototype.set = function set(child) {
         this._childResult = null;
         this._hasMultipleChildren = false;
         this._isRenderable = child.render ? true : false;
         this._isModifier = child.modify ? true : false;
-        if (child instanceof RenderNode) {
-            this._object = null;
-            this._child = child;
-            return child;
-        }
-        else {
-            this._object = child;
-            this._child = null;
-            return this;
-        }
+        this._object = child;
+        this._child = null;
+        if (child instanceof RenderNode) return child;
+        else return this;
     };
 
     /**
@@ -123,7 +117,6 @@ define(function(require, exports, module) {
 
     /**
      * Commit the content change from this node to the document.
-     *   (This should only be used by the internal engine.)
      *
      * @private
      * @method commit

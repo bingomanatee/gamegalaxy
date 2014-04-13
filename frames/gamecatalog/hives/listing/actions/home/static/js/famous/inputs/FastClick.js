@@ -10,9 +10,9 @@
 define(function(require, exports, module) {
     /**
      * FastClick is an override shim which maps event pairs of
-     * 'touchstart' and 'touchend' which differ by less than a certain
-     * threshold to the 'click' event.
-     * This is used to speed up clicks on some browsers.
+     *   'touchstart' and 'touchend' which differ by less than a certain
+     *   threshold to the 'click' event.
+     *   This is used to speed up clicks on some browsers.
      */
     if (!window.CustomEvent) return;
     var clickThreshold = 300;
@@ -37,7 +37,7 @@ define(function(require, exports, module) {
             var startTime = potentialClicks[touch.identifier];
             if (startTime && currTime - startTime < clickThreshold) {
                 event.preventDefault();
-                var clickEvt = new CustomEvent('click', {
+                var clickEvt = new window.CustomEvent('click', {
                     'bubbles': true,
                     'details': touch
                 });

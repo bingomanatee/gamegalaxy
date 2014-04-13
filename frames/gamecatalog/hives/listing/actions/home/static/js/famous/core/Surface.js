@@ -16,10 +16,9 @@ define(function(require, exports, module) {
 
     /**
      * A base class for viewable content and event
-     *   targets inside a Famous applcation, containing a renderable document
+     *   targets inside a Famo.us application, containing a renderable document
      *   fragment. Like an HTML div, it can accept internal markup,
-     *   properties, classes, and handle events. This is a public
-     *   interface and can be extended.
+     *   properties, classes, and handle events.
      *
      * @class Surface
      * @constructor
@@ -67,16 +66,13 @@ define(function(require, exports, module) {
     Surface.prototype.elementClass = 'famous-surface';
 
     /**
-     * Bind a handler function to occurrence of event type on this surface.
-     *   Document events have the opportunity to first be intercepted by the
-     *   on() method of the Surface upon which the event occurs, then
-     *   by the on() method of the FamousContext containing that surface, and
-     *   finally as a default, the FamousEngine itself.
+     * Bind a callback function to an event type handled by this object.
      *
-     * @method on&nbsp;
+     * @method "on"
      *
      * @param {string} type event type key (for example, 'click')
      * @param {function(string, Object)} fn handler callback
+     * @return {EventHandler} this
      */
     Surface.prototype.on = function on(type, fn) {
         if (this._currTarget) this._currTarget.addEventListener(type, this.eventForwarder);
@@ -85,7 +81,7 @@ define(function(require, exports, module) {
 
     /**
      * Unbind an event by type and handler.
-     *   This undoes the work of "on()"
+     *   This undoes the work of "on"
      *
      * @method removeListener
      * @param {string} type event type key (for example, 'click')
@@ -97,12 +93,13 @@ define(function(require, exports, module) {
 
     /**
      * Trigger an event, sending to all downstream handlers
-     *   matching provided 'type' key.
+     *   listening for provided 'type' key.
      *
      * @method emit
-     * @param  {string} type event type key (for example, 'click')
-     * @param  {Object} event event data
-     * @return {boolean}  true if event was handled along the event chain.
+     *
+     * @param {string} type event type key (for example, 'click')
+     * @param {Object} event event data
+     * @return {EventHandler} this
      */
     Surface.prototype.emit = function emit(type, event) {
         if (event && !event.origin) event.origin = this;
@@ -112,24 +109,24 @@ define(function(require, exports, module) {
     };
 
     /**
-     * Pipe all events to a target EventHandler
+     * Add event handler object to set of downstream handlers.
      *
      * @method pipe
-     * @param {EventHandler} target event handler to pipe to
-     * @return {EventHandler} target (to allow for chaining)
+     *
+     * @param {EventHandler} target event handler target object
+     * @return {EventHandler} passed event handler
      */
-
     Surface.prototype.pipe = function pipe(target) {
         return this.eventHandler.pipe(target);
     };
 
     /**
      * Remove handler object from set of downstream handlers.
-     * Undoes work of "pipe"
+     *   Undoes work of "pipe"
      *
      * @method unpipe
      *
-     * @param {EventHandler} target target emitter object
+     * @param {EventHandler} target target handler object
      * @return {EventHandler} provided target
      */
     Surface.prototype.unpipe = function unpipe(target) {
@@ -141,7 +138,7 @@ define(function(require, exports, module) {
      *    simply an id.
      *
      * @method render
-     * transitionable
+     * @private
      * @return {Object} render spec for this surface (spec id)
      */
     Surface.prototype.render = function render() {
@@ -150,7 +147,7 @@ define(function(require, exports, module) {
 
     /**
      * Set CSS-style properties on this Surface. Note that this will cause
-     *    dirtying and thus re-rendering, even if values do not change
+     *    dirtying and thus re-rendering, even if values do not change.
      *
      * @method setProperties
      * @param {Object} properties property dictionary of "key" => "value"
@@ -167,7 +164,7 @@ define(function(require, exports, module) {
      *
      * @method getProperties
      *
-     * @return {Object} Dictionary of properties of this Surface.
+     * @return {Object} Dictionary of this Surface's properties.
      */
     Surface.prototype.getProperties = function getProperties() {
         return this.properties;
@@ -192,7 +189,6 @@ define(function(require, exports, module) {
      * Remove CSS-style class from the list of classes on this Surface.
      *   Note this will map directly to the HTML property of the actual
      *   corresponding rendered <div>.
-     *   These will be deployed to the document on call to setup().
      *
      * @method removeClass
      * @param {string} className name of class to remove
@@ -260,11 +256,7 @@ define(function(require, exports, module) {
      * Set options for this surface
      *
      * @method setOptions
-     *
-     * @param {Array.Number} [options.size] [width, height] in pixels
-     * @param {Array.string} [options.classes] CSS classes to set on inner content
-     * @param {Array} [options.properties] string dictionary of HTML attributes to set on target div
-     * @param {string} [options.content] inner (HTML) content of surface
+     * @param {Object} [options] overrides for default options.  See constructor.
      */
     Surface.prototype.setOptions = function setOptions(options) {
         if (options.size) this.setSize(options.size);
@@ -281,7 +273,6 @@ define(function(require, exports, module) {
             target.addEventListener(i, this.eventForwarder);
         }
     }
-
 
     //  Detach Famous event handling from document events emanating from target
     //  document element.  This occurs just before recall from the document.
@@ -316,12 +307,12 @@ define(function(require, exports, module) {
     /**
      * Return a Matrix's webkit css representation to be used with the
      *    CSS3 -webkit-transform style.
-     * @example: -webkit-transform: matrix3d(1,0,0,0,0,1,0,0,0,0,1,0,716,243,0,1)
+     *    Example: -webkit-transform: matrix3d(1,0,0,0,0,1,0,0,0,0,1,0,716,243,0,1)
      *
      * @method _formatCSSTransform
      * @private
      * @param {FamousMatrix} m matrix
-     * @returns {string} matrix3d CSS style representation of the transform
+     * @return {string} matrix3d CSS style representation of the transform
      */
     function _formatCSSTransform(m) {
         var result = 'matrix3d(';
@@ -377,12 +368,12 @@ define(function(require, exports, module) {
     }
 
     /**
-     * One-time set for an element to be ready for commits to document.
+     * One-time setup for an element to be ready for commits to document.
      *
      * @private
      * @method setup
      *
-     * @param {ElementAllocator} target document element
+     * @param {ElementAllocator} allocator document element pool for this context
      */
     Surface.prototype.setup = function setup(allocator) {
         var target = allocator.allocate(this.elementType);
@@ -530,7 +521,7 @@ define(function(require, exports, module) {
     };
 
     /**
-     * Place the document element this component manages into the document.
+     * Place the document element that this component manages into the document.
      *
      * @private
      * @method deploy
@@ -559,9 +550,7 @@ define(function(require, exports, module) {
     };
 
     /**
-     *  Get the x and y dimensions of the surface.  This normally returns
-     *    the size of the rendered surface unless setSize() was called
-     *    more recently than setup().
+     *  Get the x and y dimensions of the surface.
      *
      * @method getSize
      * @param {boolean} actual return computed size rather than provided
@@ -572,11 +561,10 @@ define(function(require, exports, module) {
     };
 
     /**
-     * Set x and y dimensions of the surface.  This takes effect upon
-     *   the next call to this.{#setup()}.
+     * Set x and y dimensions of the surface.
      *
      * @method setSize
-     * @param {Array.Number} size x,y size array
+     * @param {Array.Number} size as [width, height]
      */
     Surface.prototype.setSize = function setSize(size) {
         this.size = size ? [size[0], size[1]] : null;

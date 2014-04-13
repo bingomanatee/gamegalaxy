@@ -9,8 +9,9 @@
 
 define(function(require, exports, module) {
     /**
+     * A simple in-memory object cache.  Used as a helper for Views with
+     * provider functions.
      * @class CachedMap
-     * @name CachedMap
      * @constructor
      */
     function CachedMap(mappingFunction) {
@@ -20,15 +21,26 @@ define(function(require, exports, module) {
     }
 
     /**
-     * Creates a mapping function with a cache
+     * Creates a mapping function with a cache.
+     * This is the main entrypoint for this object.
+     * @static
+     * @method create
+     * @param {function} mappingFunction mapping
+     * @return {function} memoized mapping function
      */
-    CachedMap.create = function(mappingFunction) {
+    CachedMap.create = function create(mappingFunction) {
         var instance = new CachedMap(mappingFunction);
         return instance.get.bind(instance);
     };
 
-    CachedMap.prototype.get = function(input) {
-        if(input !== this._cachedInput) {
+    /**
+     * Retrieve items from cache or from mapping functin.
+     *
+     * @method get
+     * @param {Object} input input key
+     */
+    CachedMap.prototype.get = function get(input) {
+        if (input !== this._cachedInput) {
             this._cachedInput = input;
             this._cachedOutput = this._map(input);
         }

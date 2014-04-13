@@ -8,18 +8,28 @@
  */
 
 define(function(require, exports, module) {
-    var FEH = require('famous/core/EventHandler');
+    var EventHandler = require('famous/core/EventHandler');
 
     /**
-     * @class Helper to PinchSync, RotateSync, and ScaleSync. Handles piped in
-     *        two-finger touch events. Emits an object with
-     *        properties of position, velocity, touches, and angle.
-     * @description
-     * @name TwoFingerSync
+     * Helper to PinchSync, RotateSync, and ScaleSync.  Generalized handling of
+     *   two-finger touch events.
+     *   This class is meant to be overridden and not used directly.
+     *
+     * @class TwoFingerSync
      * @constructor
+     * @param {function} legacyGetter position getter object (deprecated)
+     * @param {Object} options default options overrides
+     * @param {Number} [options.scale] scale velocity by this factor
      */
-    function TwoFingerSync(targetSync,options) {
-        this.targetGet = targetSync;
+    function TwoFingerSync(legacyGetter, options) {
+        if (arguments.length === 2){
+            this._legacyPositionGetter = arguments[0];
+            options = arguments[1];
+        }
+        else {
+            this._legacyPositionGetter = null;
+            options = arguments[0];
+        }
 
         this.options = {
             scale: 1
@@ -28,11 +38,11 @@ define(function(require, exports, module) {
         if (options) this.setOptions(options);
         else this.setOptions(this.options);
 
-        this.input = new FEH();
-        this.output = new FEH();
+        this.input = new EventHandler();
+        this.output = new EventHandler();
 
-        FEH.setInputHandler(this, this.input);
-        FEH.setOutputHandler(this, this.output);
+        EventHandler.setInputHandler(this, this.input);
+        EventHandler.setOutputHandler(this, this.output);
 
         this.touchAEnabled = false;
         this.touchAId = 0;
@@ -49,14 +59,29 @@ define(function(require, exports, module) {
         this.input.on('touchcancel', this.handleEnd.bind(this));
     }
 
+    /**
+     * Return entire options dictionary, including defaults.
+     *
+     * @method getOptions
+     * @return {Object} configuration options
+     */
     TwoFingerSync.prototype.getOptions = function getOptions() {
         return this.options;
     };
 
+    /**
+     * Set internal options, overriding any default options
+     *
+     * @method setOptions
+     *
+     * @param {Object} [options] overrides of default options
+     * @param {Number} [options.scale] scale velocity by this factor
+     */
     TwoFingerSync.prototype.setOptions = function setOptions(options) {
         if (options.scale !== undefined) this.options.scale = options.scale;
     };
 
+    // private
     TwoFingerSync.prototype.handleStart = function handleStart(event) {
         for (var i = 0; i < event.changedTouches.length; i++) {
             var touch = event.changedTouches[i];
@@ -71,11 +96,12 @@ define(function(require, exports, module) {
                 this.touchBEnabled = true;
                 this.posB = [touch.pageX, touch.pageY];
                 this.timestampB = Date.now();
-                this._startUpdate();
+                this._startUpdate(event);
             }
         }
     };
 
+    // private
     TwoFingerSync.prototype.handleMove = function handleMove(event) {
         if (!(this.touchAEnabled && this.touchBEnabled)) return;
         var prevTimeA = this.timestampA;
@@ -94,16 +120,26 @@ define(function(require, exports, module) {
                 diffTime = this.timestampB - prevTimeB;
             }
         }
+        // This is meant to be overridden in
         if (diffTime) this._moveUpdate(diffTime);
     };
 
+    // private
     TwoFingerSync.prototype.handleEnd = function handleEnd(event) {
-        var pos = this.targetGet();
+        var pos = (this.options.direction === undefined)
+            ? this._legacyPositionGetter ? this._legacyPositionGetter : [0,0]
+            : this._legacyPositionGetter ? this._legacyPositionGetter : 0;
         var scale = this.options.scale;
         for (var i = 0; i < event.changedTouches.length; i++) {
             var touch = event.changedTouches[i];
             if (touch.identifier === this.touchAId || touch.identifier === this.touchBId) {
-                if (this.touchAEnabled && this.touchBEnabled) this.output.emit('end', {p: pos, v: scale * this._vel, touches: [this.touchAId, this.touchBId], angle: this._angle});
+                if (this.touchAEnabled && this.touchBEnabled) this.output.emit('end', {
+                    position: pos,
+                    velocity: scale*this._vel,
+                    touches: [this.touchAId, this.touchBId],
+                    angle: this._angle
+                });
+
                 this.touchAEnabled = false;
                 this.touchAId = 0;
                 this.touchBEnabled = false;
@@ -113,5 +149,4 @@ define(function(require, exports, module) {
     };
 
     module.exports = TwoFingerSync;
-
 });

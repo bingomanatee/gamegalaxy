@@ -11,59 +11,32 @@ define(function(require, exports, module) {
     var TwoFingerSync = require('./TwoFingerSync');
 
     /**
-     * @class Handles piped in two-finger touch events to change position via pinching / expanding.
-     *        Outputs an object with position, velocity, touch ids, and distance.
-     * @description
+     * Handles piped in two-finger touch events to change position via pinching / expanding.
+     *   Emits 'start', 'update' and 'end' events with
+     *   position, velocity, touch ids, and distance between fingers.
+     *
+     * @class PinchSync
      * @extends TwoFingerSync
-     * @name ScaleSync
      * @constructor
-     * @example
-     * define(function(require, exports, module) {
-     *     var Engine = require('famous/core/Engine');
-     *     var Surface = require('famous/core/Surface');
-     *     var Modifier = require('famous/core/Modifier');
-     *     var FM = require('famous/core/Matrix');
-     *     var PinchSync = require('famous/input/PinchSync');
-     *     var Context = Engine.createContext();
-     *
-     *     var surface = new Surface({
-     *         size: [200,200],
-     *         properties: {
-     *             backgroundColor: 'red'
-     *         }
-     *     });
-     *
-     *     var modifier = new Modifier({
-     *         transform: undefined
-     *     });
-     *
-     *     var position = 0;
-     *     var sync = new PinchSync(function(){
-     *         return position;
-     *     }, {direction: PinchSync.DIRECTION_Y});
-     *
-     *     surface.pipe(sync);
-     *     sync.on('update', function(data) {
-     *         var edge = window.innerHeight - (surface.getSize()[1])
-     *         if (data.p > edge) {
-     *             position = edge;
-     *         } else if (data.p < 0) {
-     *             position = 0;
-     *         } else {
-     *             position = data.p;
-     *         }
-     *         modifier.setTransform(FM.translate(0, position, 0));
-     *         surface.setContent('position' + position + '<br>' + 'velocity' + data.v.toFixed(2));
-     *     });
-     *     Context.link(modifier).link(surface);
-     * });
+     * @param {function} legacyGetter position getter object (deprecated)
+     * @param {Object} options default options overrides
      */
-    function PinchSync(targetSync,options) {
-        TwoFingerSync.call(this,targetSync,options);
+    function PinchSync(legacyGetter, options) {
+        if (arguments.length === 2){
+            this._legacyPositionGetter = arguments[0];
+            options = arguments[1];
+        }
+        else {
+            this._legacyPositionGetter = null;
+            options = arguments[0];
+        }
+
+        TwoFingerSync.call(this, this._legacyPositionGetter, options);
         this._dist = undefined;
     }
 
     PinchSync.prototype = Object.create(TwoFingerSync.prototype);
+    PinchSync.prototype.constructor = PinchSync;
 
     function _calcDist(posA, posB) {
         var diffX = posB[0] - posA[0];
@@ -73,8 +46,11 @@ define(function(require, exports, module) {
 
     PinchSync.prototype._startUpdate = function _startUpdate(event) {
         this._dist = _calcDist(this.posA, this.posB);
-        this._vel = 0;
-        this.output.emit('start', {count: event.touches.length, touches: [this.touchAId, this.touchBId], distance: this._dist});
+        this.output.emit('start', {
+            count: event.touches.length,
+            touches: [this.touchAId, this.touchBId],
+            distance: this._dist
+        });
     };
 
     PinchSync.prototype._moveUpdate = function _moveUpdate(diffTime) {
@@ -82,13 +58,29 @@ define(function(require, exports, module) {
         var diffZ = currDist - this._dist;
         var veloZ = diffZ / diffTime;
 
-        var prevPos = this.targetGet();
+        var prevPos = this._legacyPositionGetter ? this._legacyPositionGetter() : 0;
         var scale = this.options.scale;
-        this.output.emit('update', {p: prevPos + scale * diffZ, v: scale * veloZ, touches: [this.touchAId, this.touchBId], distance: currDist});
+
+        this.output.emit('update', {
+            delta : diffZ,
+            position: prevPos + scale*diffZ,
+            velocity: scale*veloZ,
+            touches: [this.touchAId, this.touchBId],
+            distance: currDist
+        });
 
         this._dist = currDist;
-        this._vel = veloZ;
     };
+
+    /**
+     * See TwoFingerSync.setOptions
+     * @method setOptions
+     */
+
+    /**
+     * See TwoFingerSync.getOptions
+     * @method getOptions
+     */
 
     module.exports = PinchSync;
 });

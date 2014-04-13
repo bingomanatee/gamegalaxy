@@ -11,10 +11,16 @@ define(function(require, exports, module) {
     var Surface = require('famous/core/Surface');
 
     /**
-     *  A famo.us surface in the form of an HTML input element.
+     * A Famo.us surface in the form of an HTML input element.
+     *   This extends the Surface class.
      *
-     *  @class InputSurface
-     *  @constructor
+     * @class InputSurface
+     * @extends Surface
+     * @constructor
+     * @param {Object} [options] overrides of default options
+     * @param {string} [options.placeholder] placeholder text hint that describes the expected value of an <input> element
+     * @param {string} [options.type] specifies the type of element to display (e.g. 'datetime', 'text', 'button', etc.)
+     * @param {string} [options.value] value of text
      */
     function InputSurface(options) {
         this._placeholder = options.placeholder || '';
@@ -32,13 +38,13 @@ define(function(require, exports, module) {
     InputSurface.prototype.elementClass = 'famous-surface';
 
     /**
-     * Triggers a repaint next tick.
+     * Set placeholder text.  Note: Triggers a repaint.
      *
      * @method setPlaceholder
-     * @param {string} Value to set the html placeholder to.
-     * @returns this, allowing method chaining.
+     * @param {string} str Value to set the placeholder to.
+     * @return {InputSurface} this, allowing method chaining.
      */
-    InputSurface.prototype.setPlaceholder = function(str) {
+    InputSurface.prototype.setPlaceholder = function setPlaceholder(str) {
         this._placeholder = str;
         this._contentDirty = true;
         return this;
@@ -48,9 +54,9 @@ define(function(require, exports, module) {
      * Focus on the current input, pulling up the keyboard on mobile.
      *
      * @method focus
-     * @returns this, allowing method chaining.
+     * @return {InputSurface} this, allowing method chaining.
      */
-    InputSurface.prototype.focus = function() {
+    InputSurface.prototype.focus = function focus() {
         if (this._currTarget) this._currTarget.focus();
         return this;
     };
@@ -59,46 +65,48 @@ define(function(require, exports, module) {
      * Blur the current input, hiding the keyboard on mobile.
      *
      * @method focus
-     * @returns this, allowing method chaining.
+     * @return {InputSurface} this, allowing method chaining.
      */
-    InputSurface.prototype.blur = function() {
+    InputSurface.prototype.blur = function blur() {
         if (this._currTarget) this._currTarget.blur();
         return this;
     };
 
-
-
     /**
-     * Triggers a repaint next tick.
+     * Set the placeholder conent.
+     *   Note: Triggers a repaint next tick.
      *
      * @method setValue
-     * @param {string} Value to set the main input value to.
-     * @returns this allowing method chaining.
+     * @param {string} str Value to set the main input value to.
+     * @return {InputSurface} this, allowing method chaining.
      */
-    InputSurface.prototype.setValue = function(str) {
+    InputSurface.prototype.setValue = function setValue(str) {
         this._value = str;
         this._contentDirty = true;
         return this;
     };
 
     /**
-     * Triggers a repaint next tick.
+     * Set the type of element to display conent.
+     *   Note: Triggers a repaint next tick.
      *
      * @method setType
-     * @param {string} Set the type of the input surface.
-     * @returns this allowing method chaining.
+     * @param {string} str type of the input surface (e.g. 'button', 'text')
+     * @return {InputSurface} this, allowing method chaining.
      */
-    InputSurface.prototype.setType = function(str) {
+    InputSurface.prototype.setType = function setType(str) {
         this._type = str;
         this._contentDirty = true;
         return this;
     };
 
     /**
+     * Get the value of the inner content of the element (e.g. the entered text)
+     *
      * @method getValue
-     * @returns {string} value of current input.
+     * @return {string} value of element
      */
-    InputSurface.prototype.getValue = function() {
+    InputSurface.prototype.getValue = function getValue() {
         if (this._currTarget) {
             return this._currTarget.value;
         }
@@ -108,32 +116,37 @@ define(function(require, exports, module) {
     };
 
     /**
-     * Triggers a repaint next tick.
+     * Set the name attribute of the element.
+     *   Note: Triggers a repaint next tick.
      *
      * @method setName
-     * @param {string} Set the name of the input surface.
-     * @returns this, allowing method chaining.
+     * @param {string} str element name
+     * @return {InputSurface} this, allowing method chaining.
      */
-    InputSurface.prototype.setName = function(str) {
+    InputSurface.prototype.setName = function setName(str) {
         this._name = str;
         this._contentDirty = true;
         return this;
     };
 
     /**
+     * Get the name attribute of the element.
+     *
      * @method getName
-     * @returns {string} name of current input.
+     * @return {string} name of element
      */
-    InputSurface.prototype.getName = function() {
+    InputSurface.prototype.getName = function getName() {
         return this._name;
     };
 
     /**
-     * Sets the placeholder, value and type of the input.
+     * Place the document element this component manages into the document.
      *
+     * @private
      * @method deploy
+     * @param {Node} target document parent of this container
      */
-    InputSurface.prototype.deploy = function(target) {
+    InputSurface.prototype.deploy = function deploy(target) {
         if (this._placeholder !== '') target.placeholder = this._placeholder;
         target.value = this._value;
         target.type = this._type;

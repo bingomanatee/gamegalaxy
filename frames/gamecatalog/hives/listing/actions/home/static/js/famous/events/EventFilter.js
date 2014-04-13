@@ -12,13 +12,13 @@ define(function(require, exports, module) {
 
     /**
      * EventFilter regulates the broadcasting of events based on
-     *  a specified condition.
+     *  a specified condition function of standard event type: function(type, data).
      *
      * @class EventFilter
      * @constructor
      *
      * @param {function} condition function to determine whether or not
-     *    events are emitted
+     *    events are emitted.
      */
     function EventFilter(condition) {
         EventHandler.call(this);
@@ -28,16 +28,17 @@ define(function(require, exports, module) {
     EventFilter.prototype.constructor = EventFilter;
 
     /**
-     * Emit determines whether to send events based on the return
-     *  value of it's condition function when passed the event
-     *  type and associated data.
+     * If filter condition is met, trigger an event, sending to all downstream handlers
+     *   listening for provided 'type' key.
      *
      * @method emit
-     * @param {string} type name of the event
-     * @param {object} data associated data
+     *
+     * @param {string} type event type key (for example, 'click')
+     * @param {Object} data event data
+     * @return {EventHandler} this
      */
-    EventFilter.prototype.emit = function(type, data) {
-        if(this._condition(type, data))
+    EventFilter.prototype.emit = function emit(type, data) {
+        if (this._condition(type, data))
             return EventHandler.prototype.emit.apply(this, arguments);
     };
 

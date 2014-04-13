@@ -13,12 +13,12 @@ define(function(require, exports, module) {
     var RenderNode = require('./RenderNode');
 
     /**
-     *  Consists of a render node paired with an input event handler (this._eventInput) and an
-     *  output event handler (this._eventOutput). Useful for quickly creating elements within applications
-     *  with large event systems.
+     * Useful for quickly creating elements within applications
+     *   with large event systems.  Consists of a RenderNode paired with
+     *   an input EventHandler and an output EventHandler.
+     *   Meant to be extended by the developer.
      *
      * @class View
-     * @method View
      * @uses EventHandler
      * @uses OptionsManager
      * @uses RenderNode
@@ -41,14 +41,18 @@ define(function(require, exports, module) {
     View.DEFAULT_OPTIONS = {}; // no defaults
 
     /**
+     * Look up options value by key
      * @method getOptions
+     *
+     * @param {string} key key
+     * @return {Object} associated object
      */
     View.prototype.getOptions = function getOptions() {
         return this._optionsManager.value();
     };
 
     /*
-     *  Set the options managed by the internal options manager.
+     *  Set internal options.
      *  No defaults options are set in View.
      *
      *  @method setOptions
@@ -60,34 +64,33 @@ define(function(require, exports, module) {
 
     /**
      * Add a child renderable to the view.
-     * Delegates to a RenderNode.
-     *    Note: Meant to be used by an inheriting class
-     * @method _add
+     *   Note: This is meant to be used by an inheriting class
+     *   rather than from outside the prototype chain.
+     *
+     * @method add
      * @return {RenderNode}
      * @protected
      */
-    View.prototype._add = function _add() {
+    View.prototype.add = function add() {
         return this._node.add.apply(this._node, arguments);
     };
 
     /**
-     * Alias for "_add()"
-     * @method add
+     * Alias for add
+     * @method _add
      */
-    View.prototype.add = View.prototype._add;
+    View.prototype._add = View.prototype.add;
 
     /**
      * Generate a render spec from the contents of this component.
-     * Delegates to a RenderNode.
      *
      * @private
      * @method render
      * @return {number} Render spec for this component
      */
-    View.prototype.render =  function() {
-        return this._node.render.apply(this._node, arguments);
+    View.prototype.render = function render() {
+        return this._node.render();
     };
-
 
     /**
      * Return size of contained element.

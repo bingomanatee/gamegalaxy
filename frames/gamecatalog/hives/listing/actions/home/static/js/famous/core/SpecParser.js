@@ -1,3 +1,4 @@
+
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
@@ -13,10 +14,8 @@ define(function(require, exports, module) {
     /**
      *
      * This object translates the rendering instructions ("render specs")
-     * that renderable components generate
-     * into direct document update instructions ("update specs").
-     *
-     *   (This class should only be used by the internal engine.)
+     *   that renderable components generate into document update
+     *   instructions ("update specs").  Private.
      *
      * @private
      * @class SpecParser
@@ -30,16 +29,14 @@ define(function(require, exports, module) {
     /**
      * Convert a render spec coming from the context's render chain to an
      *    update spec for the update chain. This is the only major entry point
-     *    for a consumer of this class. An optional callback of signature
-     *    "function(update_spec)" can be provided for call upon parse
-     *    completion.
+     *    for a consumer of this class.
      *
      * @method parse
      * @static
+     * @private
      *
      * @param {renderSpec} spec input render spec
      * @param {Object} context context to do the parse in
-     * @param {function(update_spec)} callback callback on completion
      * @return {Object} the resulting update spec (if no callback
      *   specified, else none)
      */
@@ -87,9 +84,8 @@ define(function(require, exports, module) {
 
     var _originZeroZero = [0, 0];
 
-
     // From the provided renderSpec tree, recursively compose opacities,
-    //    origins, transforms, and groups corresponding to each surface id from
+    //    origins, transforms, and sizes corresponding to each surface id from
     //    the provided renderSpec tree structure. On completion, those
     //    properties of 'this' object should be ready to use to build an
     //    updateSpec.
@@ -133,7 +129,10 @@ define(function(require, exports, module) {
 
             if (spec.opacity !== undefined) opacity = parentContext.opacity * spec.opacity;
             if (spec.transform) transform = Transform.multiply(parentContext.transform, spec.transform);
-            if (spec.origin) origin = spec.origin;
+            if (spec.origin) {
+                origin = spec.origin;
+                nextSizeContext = parentContext.transform;
+            }
             if (spec.size) {
                 var parentSize = parentContext.size;
                 size = [spec.size[0] || parentSize[0], spec.size[1] || parentSize[1]];

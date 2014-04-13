@@ -9,9 +9,8 @@
 
 define(function(require, exports, module) {
 
-
     /**
-     * Create a three-element floating point vector.
+     * Three-element floating point vector.
      *
      * @class Vector
      * @constructor
@@ -20,16 +19,15 @@ define(function(require, exports, module) {
      * @param {number} y y element value
      * @param {number} z z element value
      */
-    function Vector(x,y,z){
-        // TODO: Why is this this a fallback behavior?
+    function Vector(x,y,z) {
         if (arguments.length === 1) this.set(x);
-        else{
-            this.x = x || 0.0;
-            this.y = y || 0.0;
-            this.z = z || 0.0;
-        };
+        else {
+            this.x = x || 0;
+            this.y = y || 0;
+            this.z = z || 0;
+        }
         return this;
-    };
+    }
 
     var _register = new Vector(0,0,0);
 
@@ -39,13 +37,13 @@ define(function(require, exports, module) {
      *
      * @method add
      * @param {Vector} v addend
-     * @returns {Vector} vector sum
+     * @return {Vector} vector sum
      */
-    Vector.prototype.add = function(v){
-        return _register.setXYZ(
-            this.x + (v.x || 0.0),
-            this.y + (v.y || 0.0),
-            this.z + (v.z || 0.0)
+    Vector.prototype.add = function add(v) {
+        return _setXYZ.call(_register,
+            this.x + v.x,
+            this.y + v.y,
+            this.z + v.z
         );
     };
 
@@ -55,10 +53,10 @@ define(function(require, exports, module) {
      *
      * @method sub
      * @param {Vector} v subtrahend
-     * @returns {Vector} vector difference
+     * @return {Vector} vector difference
      */
-    Vector.prototype.sub = function(v){
-        return _register.setXYZ(
+    Vector.prototype.sub = function sub(v) {
+        return _setXYZ.call(_register,
             this.x - v.x,
             this.y - v.y,
             this.z - v.z
@@ -72,10 +70,10 @@ define(function(require, exports, module) {
      * @method mult
      *
      * @param {number} r scalar
-     * @returns {Vector} vector result
+     * @return {Vector} vector result
      */
-    Vector.prototype.mult = function(r){
-        return _register.setXYZ(
+    Vector.prototype.mult = function mult(r) {
+        return _setXYZ.call(_register,
             r * this.x,
             r * this.y,
             r * this.z
@@ -89,24 +87,29 @@ define(function(require, exports, module) {
      * @method div
      *
      * @param {number} r scalar
-     * @returns {Vector} vector result
+     * @return {Vector} vector result
      */
-    Vector.prototype.div = function(r){
-        return this.mult(1/r);
+    Vector.prototype.div = function div(r) {
+        return this.mult(1 / r);
     };
 
     /**
-     * Given another vector v, return cross product (v)x(this)
+     * Given another vector v, return cross product (v)x(this).
      *   Note: This sets the internal result register, so other references to that vector will change.
      *
      * @method cross
      * @param {Vector} v Left Hand Vector
-     * @returns {Vector} vector result
+     * @return {Vector} vector result
      */
-    Vector.prototype.cross = function(v){
-        var x = this.x, y = this.y, z = this.z;
-        var vx = v.x, vy = v.y, vz = v.z;
-        return _register.setXYZ(
+    Vector.prototype.cross = function cross(v) {
+        var x = this.x;
+        var y = this.y;
+        var z = this.z;
+        var vx = v.x;
+        var vy = v.y;
+        var vz = v.z;
+
+        return _setXYZ.call(_register,
             z * vy - y * vz,
             x * vz - z * vx,
             y * vx - x * vy
@@ -117,10 +120,10 @@ define(function(require, exports, module) {
      * Component-wise equality test between this and Vector v.
      * @method equals
      * @param {Vector} v vector to compare
-     * @returns {boolean}
+     * @return {boolean}
      */
-    Vector.prototype.equals = function(v){
-        return (v.x == this.x && v.y == this.y && v.z == this.z);
+    Vector.prototype.equals = function equals(v) {
+        return (v.x === this.x && v.y === this.y && v.z === this.z);
     };
 
     /**
@@ -128,9 +131,9 @@ define(function(require, exports, module) {
      *   Note: This sets the internal result register, so other references to that vector will change.
      * @method rotateX
      * @param {number} theta radians
-     * @returns {Vector} rotated vector
+     * @return {Vector} rotated vector
      */
-    Vector.prototype.rotateX = function(theta){
+    Vector.prototype.rotateX = function rotateX(theta) {
         var x = this.x;
         var y = this.y;
         var z = this.z;
@@ -138,7 +141,7 @@ define(function(require, exports, module) {
         var cosTheta = Math.cos(theta);
         var sinTheta = Math.sin(theta);
 
-        return _register.setXYZ(
+        return _setXYZ.call(_register,
             x,
             y * cosTheta - z * sinTheta,
             y * sinTheta + z * cosTheta
@@ -150,10 +153,9 @@ define(function(require, exports, module) {
      *   Note: This sets the internal result register, so other references to that vector will change.
      * @method rotateY
      * @param {number} theta radians
-     * @returns {Vector} rotated vector
+     * @return {Vector} rotated vector
      */
-    Vector.prototype.rotateY = function(theta, out){
-        out = out || _register;
+    Vector.prototype.rotateY = function rotateY(theta) {
         var x = this.x;
         var y = this.y;
         var z = this.z;
@@ -161,7 +163,7 @@ define(function(require, exports, module) {
         var cosTheta = Math.cos(theta);
         var sinTheta = Math.sin(theta);
 
-        return out.setXYZ(
+        return _setXYZ.call(_register,
             z * sinTheta + x * cosTheta,
             y,
             z * cosTheta - x * sinTheta
@@ -173,9 +175,9 @@ define(function(require, exports, module) {
      *   Note: This sets the internal result register, so other references to that vector will change.
      * @method rotateZ
      * @param {number} theta radians
-     * @returns {Vector} rotated vector
+     * @return {Vector} rotated vector
      */
-    Vector.prototype.rotateZ = function(theta){
+    Vector.prototype.rotateZ = function rotateZ(theta) {
         var x = this.x;
         var y = this.y;
         var z = this.z;
@@ -183,7 +185,7 @@ define(function(require, exports, module) {
         var cosTheta = Math.cos(theta);
         var sinTheta = Math.sin(theta);
 
-        return _register.setXYZ(
+        return _setXYZ.call(_register,
             x * cosTheta - y * sinTheta,
             x * sinTheta + y * cosTheta,
             z
@@ -194,27 +196,27 @@ define(function(require, exports, module) {
      * Return dot product of this with a second Vector
      * @method dot
      * @param {Vector} v second vector
-     * @returns {number} dot product
+     * @return {number} dot product
      */
-    Vector.prototype.dot = function(v){
+    Vector.prototype.dot = function dot(v) {
         return this.x * v.x + this.y * v.y + this.z * v.z;
     };
 
     /**
      * Return squared length of this vector
      * @method normSquared
-     * @returns {number} squared length
+     * @return {number} squared length
      */
-    Vector.prototype.normSquared = function(){
+    Vector.prototype.normSquared = function normSquared() {
         return this.dot(this);
     };
 
     /**
      * Return length of this vector
      * @method norm
-     * @returns {number} length
+     * @return {number} length
      */
-    Vector.prototype.norm = function(){
+    Vector.prototype.norm = function norm() {
         return Math.sqrt(this.normSquared());
     };
 
@@ -222,19 +224,17 @@ define(function(require, exports, module) {
      * Scale Vector to specified length.
      *   If length is less than internal tolerance, set vector to [length, 0, 0].
      *   Note: This sets the internal result register, so other references to that vector will change.
-     * @name normalize
+     * @method normalize
      *
      * @param {number} length target length, default 1.0
-     * @returns {Vector}
+     * @return {Vector}
      */
-    Vector.prototype.normalize = function(length){
-        length  = (length !== undefined) ? length : 1.0;
-
-        var tolerance = 1e-7;
+    Vector.prototype.normalize = function normalize(length) {
+        if (arguments.length === 0) length = 1;
         var norm = this.norm();
 
-        if (Math.abs(norm) > tolerance) return _register.set(this.mult(length / norm));
-        else return _register.setXYZ(length, 0.0, 0.0);
+        if (norm > 1e-7) return _setFromVector.call(_register, this.mult(length / norm));
+        else return _setXYZ.call(_register, length, 0, 0);
     };
 
     /**
@@ -242,9 +242,9 @@ define(function(require, exports, module) {
      *
      * @method clone
      *
-     * @returns {Vector}
+     * @return {Vector}
      */
-    Vector.prototype.clone = function(){
+    Vector.prototype.clone = function clone() {
         return new Vector(this);
     };
 
@@ -253,49 +253,50 @@ define(function(require, exports, module) {
      *
      * @method isZero
      *
-     * @returns {boolean}
+     * @return {boolean}
      */
-    Vector.prototype.isZero = function(){
+    Vector.prototype.isZero = function isZero() {
         return !(this.x || this.y || this.z);
     };
 
-    /**
-     * Set the internal values from an array.
-     *
-     * @method setFromArray
-     * @param {array} v source array
-     * @returns {Vector} this
-     */
-    Vector.prototype.setFromArray = function(v){
-        this.x = v[0];
-        this.y = v[1];
-        this.z = v[2] || 0.0;
+    function _setXYZ(x,y,z) {
+        this.x = x;
+        this.y = y;
+        this.z = z;
         return this;
-    };
+    }
+
+    function _setFromArray(v) {
+        return _setXYZ.call(this,v[0],v[1],v[2] || 0);
+    }
+
+    function _setFromVector(v) {
+        return _setXYZ.call(this, v.x, v.y, v.z);
+    }
+
+    function _setFromNumber(x) {
+        return _setXYZ.call(this,x,0,0);
+    }
 
     /**
-     * Set this Vector to the values in the provided numbArray or Vector.
+     * Set this Vector to the values in the provided Array or Vector.
      *
      * @method set
      * @param {object} v array, Vector, or number
-     * @returns {Vector} this
+     * @return {Vector} this
      */
-    Vector.prototype.set = function(v){
-        if (v instanceof Array){
-            this.setFromArray(v);
-        }
-        else if (v instanceof Vector){
-            this.x = v.x;
-            this.y = v.y;
-            this.z = v.z;
-        }
-        else if (typeof v == 'number') {
-            this.x = v;
-            this.y = 0;
-            this.z = 0;
-        }
-        if (this !== _register) _register.clear();
-        return this;
+    Vector.prototype.set = function set(v) {
+        if (v instanceof Array)    return _setFromArray.call(this, v);
+        if (v instanceof Vector)   return _setFromVector.call(this, v);
+        if (typeof v === 'number') return _setFromNumber.call(this, v);
+    };
+
+    Vector.prototype.setXYZ = function(x,y,z) {
+        return _setXYZ.apply(this, arguments);
+    };
+
+    Vector.prototype.set1D = function(x) {
+        return _setFromNumber.call(this, x);
     };
 
     /**
@@ -303,25 +304,11 @@ define(function(require, exports, module) {
      *
      * @method put
      * @param {Vector} v destination vector
-     * @returns {Vector} destination vector
+     * @return {Vector} destination vector
      */
-    Vector.prototype.put = function(v){
-        v.set(_register);
-    };
 
-    /**
-     * Set elements directly and clear internal register.
-     *   Note: This sets clears internal result register, so other references to that vector will change.
-     *
-     * @method setXYZ
-     * @returns {Vector} this
-     */
-    Vector.prototype.setXYZ = function(x,y,z){
-        _register.clear();
-        this.x = x;
-        this.y = y;
-        this.z = z;
-        return this;
+    Vector.prototype.put = function put(v) {
+        _setFromVector.call(v, _register);
     };
 
     /**
@@ -329,10 +316,8 @@ define(function(require, exports, module) {
      *
      * @method clear
      */
-    Vector.prototype.clear = function(){
-        this.x = 0;
-        this.y = 0;
-        this.z = 0;
+    Vector.prototype.clear = function clear() {
+        return _setXYZ.call(this,0,0,0);
     };
 
     /**
@@ -341,13 +326,13 @@ define(function(require, exports, module) {
      *   Note: This sets the internal result register, so other references to that vector will change.
      *
      * @method cap
-     * @returns {Vector} capped vector
+     * @return {Vector} capped vector
      */
-    Vector.prototype.cap = function(cap){
-        if (cap === Infinity) return _register.set(this);
+    Vector.prototype.cap = function cap(cap) {
+        if (cap === Infinity) return _setFromVector.call(_register, this);
         var norm = this.norm();
-        if (norm > cap) return _register.set(this.mult(cap/norm));
-        else return _register.set(this);
+        if (norm > cap) return _setFromVector.call(_register, this.mult(cap / norm));
+        else return _setFromVector.call(_register, this);
     };
 
     /**
@@ -356,9 +341,9 @@ define(function(require, exports, module) {
      *
      * @method project
      * @param {Vector} n vector to project upon
-     * @returns {Vector} projected vector
+     * @return {Vector} projected vector
      */
-    Vector.prototype.project = function(n){
+    Vector.prototype.project = function project(n) {
         return n.mult(this.dot(n));
     };
 
@@ -368,31 +353,25 @@ define(function(require, exports, module) {
      *
      * @method reflectAcross
      * @param {Vector} n vector to reflect across
-     * @returns {Vector} reflected vector
+     * @return {Vector} reflected vector
      */
-    Vector.prototype.reflectAcross = function(n){
-        n.set(n.normalize());
-        return _register.set(this.sub(this.project(n).mult(2)));
-    };
-
-    /**
-     * Convert this to three-element array.
-     *
-     * @method toArray
-     * @returns {array<number>} three-element array
-     */
-    Vector.prototype.toArray = function(){
-        return [this.x, this.y, this.z];
+    Vector.prototype.reflectAcross = function reflectAcross(n) {
+        n.normalize().put(n);
+        return _setFromVector(_register, this.sub(this.project(n).mult(2)));
     };
 
     /**
      * Convert Vector to three-element array.
      *
      * @method get
-     * @returns {array<number>} three-element array
+     * @return {array<number>} three-element array
      */
-    Vector.prototype.get = function(){
-        return this.toArray();
+    Vector.prototype.get = function get() {
+        return [this.x, this.y, this.z];
+    };
+
+    Vector.prototype.get1D = function() {
+        return this.x;
     };
 
     module.exports = Vector;

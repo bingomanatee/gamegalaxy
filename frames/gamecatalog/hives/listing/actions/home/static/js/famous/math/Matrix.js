@@ -11,15 +11,14 @@ define(function(require, exports, module) {
     var Vector = require('./Vector');
 
     /**
-     * Create a 3x3 numerical matrix as a two-level array.
-     *   An empty parameter returns an identity matrix.
+     * A library for using a 3x3 numerical matrix, represented as a two-level array.
      *
      * @class Matrix
      * @constructor
      *
-     * @param {array<array>} values array of rows
+     * @param {Array.Array} values array of rows
      */
-    function Matrix(values){
+    function Matrix(values) {
         this.values = values ||
             [
                 [1,0,0],
@@ -28,7 +27,7 @@ define(function(require, exports, module) {
             ];
 
         return this;
-    };
+    }
 
     var _register = new Matrix();
     var _vectorRegister = new Vector();
@@ -38,9 +37,9 @@ define(function(require, exports, module) {
      *
      * @method get
      *
-     * @return {array<array>} matrix values as array of rows.
+     * @return {Array.array} matrix values as array of rows.
      */
-    Matrix.prototype.get = function(){
+    Matrix.prototype.get = function get() {
         return this.values;
     };
 
@@ -49,9 +48,9 @@ define(function(require, exports, module) {
      *
      * @method set
      *
-     * @param {array<array>} values matrix values as array of rows.
+     * @param {Array.array} values matrix values as array of rows.
      */
-    Matrix.prototype.set = function(values){
+    Matrix.prototype.set = function set(values) {
         this.values = values;
     };
 
@@ -65,14 +64,25 @@ define(function(require, exports, module) {
      * @param {Vector} v input vector V
      * @return {Vector} result of multiplication, as a handle to the internal vector register
      */
-    Matrix.prototype.vectorMultiply = function(v){
+    Matrix.prototype.vectorMultiply = function vectorMultiply(v) {
         var M = this.get();
-        var v0 = v.x , v1 = v.y , v2 = v.z,
-            M0 = M[0], M1 = M[1], M2 = M[2];
+        var v0 = v.x;
+        var v1 = v.y;
+        var v2 = v.z;
 
-        var M00 = M0[0], M01 = M0[1], M02 = M0[2],
-            M10 = M1[0], M11 = M1[1], M12 = M1[2],
-            M20 = M2[0], M21 = M2[1], M22 = M2[2];
+        var M0 = M[0];
+        var M1 = M[1];
+        var M2 = M[2];
+
+        var M00 = M0[0];
+        var M01 = M0[1];
+        var M02 = M0[2];
+        var M10 = M1[0];
+        var M11 = M1[1];
+        var M12 = M1[2];
+        var M20 = M2[0];
+        var M21 = M2[1];
+        var M22 = M2[2];
 
         return _vectorRegister.setXYZ(
             M00*v0 + M01*v1 + M02*v2,
@@ -80,7 +90,6 @@ define(function(require, exports, module) {
             M20*v0 + M21*v1 + M22*v2
         );
     };
-
 
     /**
      * Multiply the provided matrix M2 with this matrix.  Result is (this) * (M2).
@@ -92,22 +101,21 @@ define(function(require, exports, module) {
      * @param {Matrix} M2 input matrix to multiply on the right
      * @return {Matrix} result of multiplication, as a handle to the internal register
      */
-    Matrix.prototype.multiply = function(M2){
+    Matrix.prototype.multiply = function multiply(M2) {
         var M1 = this.get();
         var result = [[]];
-        for (var i = 0; i < 3; i++){
+        for (var i = 0; i < 3; i++) {
             result[i] = [];
-            for (var j = 0; j < 3; j++){
+            for (var j = 0; j < 3; j++) {
                 var sum = 0;
-                for (var k = 0; k < 3; k++){
+                for (var k = 0; k < 3; k++) {
                     sum += M1[i][k] * M2[k][j];
-                };
+                }
                 result[i][j] = sum;
-            };
-        };
+            }
+        }
         return _register.set(result);
     };
-
 
     /**
      * Creates a Matrix which is the transpose of this matrix.
@@ -118,11 +126,11 @@ define(function(require, exports, module) {
      *
      * @return {Matrix} result of transpose, as a handle to the internal register
      */
-    Matrix.prototype.transpose = function(){
+    Matrix.prototype.transpose = function transpose() {
         var result = [];
         var M = this.get();
-        for (var row = 0; row < 3; row++){
-            for (var col = 0; col < 3; col++){
+        for (var row = 0; row < 3; row++) {
+            for (var col = 0; col < 3; col++) {
                 result[row][col] = M[col][row];
             }
         }
@@ -135,13 +143,13 @@ define(function(require, exports, module) {
      * @method clone
      * @return {Matrix} New copy of the original matrix
      */
-    Matrix.prototype.clone = function(){
+    Matrix.prototype.clone = function clone() {
         var values = this.get();
         var M = [];
         for (var row = 0; row < 3; row++)
             M[row] = values[row].slice();
         return new Matrix(M);
-    }
+    };
 
     module.exports = Matrix;
 });

@@ -21,9 +21,13 @@ define(function(require, exports, module) {
 
     var _event  = 'prerender';
 
-    var getTime = (window.performance)
-        ? function(){return performance.now()}
-        : function(){return Date.now()}
+    var getTime = (window.performance) ?
+        function() {
+            return window.performance.now();
+        }
+        : function() {
+            return Date.now();
+        };
 
     /**
      * Add a function to be run on every prerender
@@ -34,10 +38,10 @@ define(function(require, exports, module) {
      *
      * @return {function} function passed in as parameter
      */
-    function addTimerFunction(fn){
+    function addTimerFunction(fn) {
         FamousEngine.on(_event, fn);
         return fn;
-    };
+    }
 
     /**
      * Wraps a function to be invoked after a certain amount of time.
@@ -51,17 +55,17 @@ define(function(require, exports, module) {
      *
      * @return {function} function passed in as parameter
      */
-    function setTimeout(fn, duration){
+    function setTimeout(fn, duration) {
         var t = getTime();
-        var callback = function(){
+        var callback = function() {
             var t2 = getTime();
-            if (t2 - t >= duration){
+            if (t2 - t >= duration) {
                 fn.apply(this, arguments);
                 FamousEngine.removeListener(_event, callback);
-            };
+            }
         };
         return addTimerFunction(callback);
-    };
+    }
 
     /**
      * Wraps a function to be invoked after a certain amount of time.
@@ -75,18 +79,17 @@ define(function(require, exports, module) {
      *
      * @return {function} function passed in as parameter
      */
-    function setInterval(fn, duration){
+    function setInterval(fn, duration) {
         var t = getTime();
-        var callback = function(){
+        var callback = function() {
             var t2 = getTime();
-            if (t2 - t >= duration){
+            if (t2 - t >= duration) {
                 fn.apply(this, arguments);
                 t = getTime();
-            };
+            }
         };
         return addTimerFunction(callback);
-    };
-
+    }
 
     /**
      * Wraps a function to be invoked after a certain amount of prerender ticks.
@@ -99,17 +102,17 @@ define(function(require, exports, module) {
      *
      * @return {function} function passed in as parameter
      */
-    function after(fn, numTicks){
-        if (numTicks === undefined) return;
-        var callback = function(){
+    function after(fn, numTicks) {
+        if (numTicks === undefined) return undefined;
+        var callback = function() {
             numTicks--;
-            if (numTicks <= 0){ //in case numTicks is fraction or negative
+            if (numTicks <= 0) { //in case numTicks is fraction or negative
                 fn.apply(this, arguments);
                 clear(callback);
-            };
+            }
         };
         return addTimerFunction(callback);
-    };
+    }
 
     /**
      * Wraps a function to be continually invoked after a certain amount of prerender ticks.
@@ -122,18 +125,18 @@ define(function(require, exports, module) {
      *
      * @return {function} function passed in as parameter
      */
-    function every(fn, numTicks){
+    function every(fn, numTicks) {
         numTicks = numTicks || 1;
         var initial = numTicks;
-        var callback = function(){
+        var callback = function() {
             numTicks--;
-            if (numTicks <= 0){ //in case numTicks is fraction or negative
+            if (numTicks <= 0) { //in case numTicks is fraction or negative
                 fn.apply(this, arguments);
                 numTicks = initial;
-            };
+            }
         };
         return addTimerFunction(callback);
-    };
+    }
 
     /**
      * Remove a function that gets called every prerender
@@ -142,9 +145,9 @@ define(function(require, exports, module) {
      *
      * @param {function} fn event linstener
      */
-    function clear(fn){
+    function clear(fn) {
         FamousEngine.removeListener(_event, fn);
-    };
+    }
 
     /**
      * Executes a function after a certain amount of time. Makes sure
@@ -158,16 +161,20 @@ define(function(require, exports, module) {
      * @return {function} function that is not able to debounce
      */
     function debounce(func, wait) {
-        var timeout, ctx, timestamp, result, args;
-        return function () {
+        var timeout;
+        var ctx;
+        var timestamp;
+        var result;
+        var args;
+        return function() {
             ctx = this;
             args = arguments;
             timestamp = getTime();
 
-            var fn =  function () {
+            var fn = function() {
                 var last = getTime - timestamp;
 
-                if(last < wait) {
+                if (last < wait) {
                     timeout = setTimeout(fn, wait - last);
                 } else {
                     timeout = null;
@@ -175,13 +182,13 @@ define(function(require, exports, module) {
                 }
             };
 
-            if(!timeout) {
+            if (!timeout) {
                 timeout = setTimeout(fn, wait);
             }
 
             return result;
         };
-    };
+    }
 
     module.exports = {
         setTimeout : setTimeout,

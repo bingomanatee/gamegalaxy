@@ -9,6 +9,7 @@
 
 define(function(require, exports, module) {
     var Entity = require('famous/core/Entity');
+    var RenderNode = require('famous/core/RenderNode');
     var Transform = require('famous/core/Transform');
     var ViewSequence = require('famous/core/ViewSequence');
     var Modifier = require('famous/core/Modifier');
@@ -18,22 +19,22 @@ define(function(require, exports, module) {
 
     /**
      * A layout which divides a context into several evenly-sized grid cells.
-      If dimensions are provided, the grid is evenly subdivided with children
-      cells representing their own context, otherwise the cellSize property is used to compute
-      dimensions so that items of cellSize will fit.
+     *   If dimensions are provided, the grid is evenly subdivided with children
+     *   cells representing their own context, otherwise the cellSize property is used to compute
+     *   dimensions so that items of cellSize will fit.
      * @class GridLayout
      * @constructor
      * @param {Options} [options] An object of configurable options.
-     * @param {Array.Number} [dimensions=[1, 1]] A two value array which specifies the amount of columns
+     * @param {Array.Number} [options.dimensions=[1, 1]] A two value array which specifies the amount of columns
      * and rows in your Gridlayout instance.
-     * @param {Array.Number} [cellSize=[250, 250]]  A two-value array which specifies the width and height
+     * @param {Array.Number} [options.cellSize=[250, 250]]  A two-value array which specifies the width and height
      * of each cell in your Gridlayout instance.
-     * @param {Transition} [transition=false] The transiton that controls the Gridlayout instance's reflow.
+     * @param {Transition} [options.transition=false] The transiton that controls the Gridlayout instance's reflow.
      */
     function GridLayout(options) {
         this.options = Object.create(GridLayout.DEFAULT_OPTIONS);
         this.optionsManager = new OptionsManager(this.options);
-        if(options) this.setOptions(options);
+        if (options) this.setOptions(options);
 
         this.id = Entity.register(this);
 
@@ -45,17 +46,17 @@ define(function(require, exports, module) {
     }
 
     function _reflow(size, cols, rows) {
-        if(!rows) rows = (size[1] / this.options.cellSize[1]) | 0;
-        if(!cols) cols = (size[0] / this.options.cellSize[0]) | 0;
+        if (!rows) rows = (size[1] / this.options.cellSize[1]) | 0;
+        if (!cols) cols = (size[0] / this.options.cellSize[0]) | 0;
         var rowSize = size[1] / rows;
         var colSize = size[0] / cols;
-        for(var i = 0; i < rows; i++) {
+        for (var i = 0; i < rows; i++) {
             var currY = Math.round(rowSize * i);
-            for(var j = 0; j < cols; j++) {
+            for (var j = 0; j < cols; j++) {
                 var currX = Math.round(colSize * j);
                 var currIndex = i * cols + j;
-                if(!(currIndex in this._modifiers)) _createModifier.call(this, currIndex);
-                _animateModifier.call(this, currIndex, [Math.round(colSize * (j + 1)) - currX, Math.round(rowSize * ( i+ 1)) - currY], [currX, currY, 0], 1);
+                if (!(currIndex in this._modifiers)) _createModifier.call(this, currIndex);
+                _animateModifier.call(this, currIndex, [Math.round(colSize * (j + 1)) - currX, Math.round(rowSize * (i+ 1)) - currY], [currX, currY, 0], 1);
             }
         }
         this._dimensionsCache = [this.options.dimensions[0], this.options.dimensions[1]];
@@ -110,7 +111,14 @@ define(function(require, exports, module) {
         transition: false
     };
 
-    GridLayout.prototype.render = function() {
+    /**
+     * Generate a render spec from the contents of this component.
+     *
+     * @private
+     * @method render
+     * @return {Object} Render spec for this component
+     */
+    GridLayout.prototype.render = function render() {
         return this.id;
     };
 
@@ -120,7 +128,7 @@ define(function(require, exports, module) {
      * @method setOptions
      * @param {Options} options An object of configurable options for the GridLayout instance.
      */
-    GridLayout.prototype.setOptions = function(options) {
+    GridLayout.prototype.setOptions = function setOptions(options) {
         return this.optionsManager.setOptions(options);
     };
 
@@ -130,12 +138,21 @@ define(function(require, exports, module) {
      * @method sequenceFrom
      * @param {Array|ViewSequence} sequence Either an array of renderables or a Famous viewSequence.
      */
-    GridLayout.prototype.sequenceFrom = function(sequence) {
-        if(sequence instanceof Array) sequence = new ViewSequence(sequence);
+    GridLayout.prototype.sequenceFrom = function sequenceFrom(sequence) {
+        if (sequence instanceof Array) sequence = new ViewSequence(sequence);
         this.sequence = sequence;
     };
 
-    GridLayout.prototype.commit = function(context) {
+    /**
+     * Apply changes from this component to the corresponding document element.
+     * This includes changes to classes, styles, size, content, opacity, origin,
+     * and matrix transforms.
+     *
+     * @private
+     * @method commit
+     * @param {Context} context commit context
+     */
+    GridLayout.prototype.commit = function commit(context) {
         var transform = context.transform;
         var opacity = context.opacity;
         var origin = context.origin;
@@ -144,21 +161,21 @@ define(function(require, exports, module) {
         var cols = this.options.dimensions[0];
         var rows = this.options.dimensions[1];
 
-        if(size[0] !== this._contextSizeCache[0] || size[1] !== this._contextSizeCache[1] || cols !== this._dimensionsCache[0] || rows !== this._dimensionsCache[1]) {
+        if (size[0] !== this._contextSizeCache[0] || size[1] !== this._contextSizeCache[1] || cols !== this._dimensionsCache[0] || rows !== this._dimensionsCache[1]) {
             _reflow.call(this, size, cols, rows);
         }
 
         var sequence = this.sequence;
         var result = [];
         var currIndex = 0;
-        while(sequence && (currIndex < this._modifiers.length)) {
+        while (sequence && (currIndex < this._modifiers.length)) {
             var item = sequence.get();
             var modifier = this._modifiers[currIndex];
-            if(currIndex >= this._activeCount && this._states[currIndex].opacity.isActive()) {
+            if (currIndex >= this._activeCount && this._states[currIndex].opacity.isActive()) {
                 this._modifiers.splice(currIndex, 1);
                 this._states.splice(currIndex, 1);
             }
-            if(item) {
+            if (item) {
                 result[currIndex] = modifier.modify({
                     origin: origin,
                     target: item.render()
@@ -168,7 +185,7 @@ define(function(require, exports, module) {
             currIndex++;
         }
 
-        if(size) transform = Transform.moveThen([-size[0]*origin[0], -size[1]*origin[1], 0], transform);
+        if (size) transform = Transform.moveThen([-size[0]*origin[0], -size[1]*origin[1], 0], transform);
         var nextSpec = {
             transform: transform,
             opacity: opacity,

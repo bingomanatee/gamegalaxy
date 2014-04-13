@@ -13,13 +13,13 @@ define(function(require, exports, module) {
      * The singleton object initiated upon process
      *   startup which manages all active Context instances, runs
      *   the render dispatch loop, and acts as a listener and dispatcher
-     *   for events.
+     *   for events.  All methods are therefore static.
      *
-     * On static initialization, window.requestAnimationFrame is called with
-     *   the event loop function, step().
+     *   On static initialization, window.requestAnimationFrame is called with
+     *     the event loop function.
      *
-     * Note: Any window in which Engine runs will prevent default
-     *   scrolling behavior on the 'touchmove' event.
+     *   Note: Any window in which Engine runs will prevent default
+     *     scrolling behavior on the 'touchmove' event.
      *
      * @static
      * @class Engine
@@ -54,16 +54,15 @@ define(function(require, exports, module) {
 
     /**
      * Inside requestAnimationFrame loop, step() is called, which:
-     *   - calculates current FPS (throttling loop if it is over limit set in setFPSCap)
-     *   - emits dataless 'prerender' event on start of loop
-     *   - calls in order any one-shot functions registered by nextTick on last loop.
-     *   - calls Context.update on all Context objects registered.
-     *   - emits dataless 'postrender' event on end of loop
+     *   calculates current FPS (throttling loop if it is over limit set in setFPSCap),
+     *   emits dataless 'prerender' event on start of loop,
+     *   calls in order any one-shot functions registered by nextTick on last loop,
+     *   calls Context.update on all Context objects registered,
+     *   and emits dataless 'postrender' event on end of loop.
      *
      * @static
      * @private
      * @method step
-     *
      */
     Engine.step = function step() {
         var currentTime = Date.now();
@@ -103,9 +102,9 @@ define(function(require, exports, module) {
     requestAnimationFrame(loop);
 
     //
-    // Upon main document window resize (unless on an "input" HTML element)
-    //   - scroll to the top left corner of the window
-    //   - For each managed {@link Context}: emit the 'resize' event and update its size
+    // Upon main document window resize (unless on an "input" HTML element):
+    //   scroll to the top left corner of the window,
+    //   and for each managed Context: emit the 'resize' event and update its size.
     // @param {Object=} event document event
     //
     function handleResize(event) {
@@ -130,15 +129,13 @@ define(function(require, exports, module) {
         event.preventDefault();
     }, true);
 
-
     /**
-     * Add handler object to set of downstream handlers.
+     * Add event handler object to set of downstream handlers.
      *
-     * @static
      * @method pipe
      *
-     * @param {EventHandler} target downstream event handlers
-     * @return {EventHandler} event handler object (for chaining)
+     * @param {EventHandler} target event handler target object
+     * @return {EventHandler} passed event handler
      */
     Engine.pipe = function pipe(target) {
         if (target.subscribe instanceof Function) return target.subscribe(Engine);
@@ -146,13 +143,13 @@ define(function(require, exports, module) {
     };
 
     /**
-     * Stop piping all events at the Engine level to a target emitter
-     *   object.  Undoes the work of {@link pipe}.
+     * Remove handler object from set of downstream handlers.
+     *   Undoes work of "pipe".
      *
-     * @static
      * @method unpipe
      *
-     * @param {emitterObject} target target emitter object
+     * @param {EventHandler} target target handler object
+     * @return {EventHandler} provided target
      */
     Engine.unpipe = function unpipe(target) {
         if (target.unsubscribe instanceof Function) return target.unsubscribe(Engine);
@@ -160,19 +157,14 @@ define(function(require, exports, module) {
     };
 
     /**
-     * Bind a handler function to an event type handled by this object.
-     * The document events to which Engine
-     *   listens by default include: 'touchstart', 'touchmove', 'touchend',
-     *   'touchcancel',
-     *   'click', 'keydown', 'keyup', 'keypress', 'mousemove',
-     *   'mouseover', 'mouseout'.
+     * Bind a callback function to an event type handled by this object.
      *
      * @static
-     * @method on&nbsp;
+     * @method "on"
      *
      * @param {string} type event type key (for example, 'click')
      * @param {function(string, Object)} handler callback
-     * @return {EventHandler} internal event handler
+     * @return {EventHandler} this
      */
     Engine.on = function on(type, handler) {
         if (!(type in eventForwarders)) {
@@ -184,22 +176,21 @@ define(function(require, exports, module) {
 
     /**
      * Trigger an event, sending to all downstream handlers
-     *   matching provided 'type' key.
+     *   listening for provided 'type' key.
      *
-     * @static
      * @method emit
      *
      * @param {string} type event type key (for example, 'click')
      * @param {Object} event event data
+     * @return {EventHandler} this
      */
     Engine.emit = function emit(type, event) {
         return eventHandler.emit(type, event);
     };
 
-
     /**
      * Unbind an event by type and handler.
-     *   This undoes the work of "on()".
+     *   This undoes the work of "on".
      *
      * @static
      * @method removeListener
@@ -238,9 +229,8 @@ define(function(require, exports, module) {
         frameTimeLimit = Math.floor(1000 / fps);
     };
 
-    // TODO: OptionsManager can only take one argument, so why use "arguments"?
     /**
-     * Return engine options
+     * Return engine options.
      *
      * @static
      * @method getOptions
@@ -259,21 +249,23 @@ define(function(require, exports, module) {
      *
      * @param {Object} [options] overrides of default options
      * @param {Number} [options.fpsCap]  maximum fps at which the system should run
-     * @param {boolean} [options.runLoop] whether the run loop should continue
+     * @param {boolean} [options.runLoop=true] whether the run loop should continue
+     * @param {string} [options.containerType="div"] type of container element.  Defaults to 'div'.
+     * @param {string} [options.containerClass="famous-container"] type of container element.  Defaults to 'famous-container'.
      */
     Engine.setOptions = function setOptions(options) {
         return optionsManager.setOptions.apply(optionsManager, arguments);
     };
 
     /**
-     * Creates a new Context for Famo.us rendering and event handling with
+     * Creates a new Context for rendering and event handling with
      *    provided document element as top of each tree. This will be tracked by the
      *    process-wide Engine.
      *
      * @static
      * @method createContext
      *
-     * @param {Node} el Top of document tree
+     * @param {Node} el will be top of Famo.us document element tree
      * @return {Context} new Context within el
      */
     Engine.createContext = function createContext(el) {
@@ -292,7 +284,7 @@ define(function(require, exports, module) {
     };
 
     /**
-     * Registers a context to be updated within the run loop.
+     * Registers an existing context to be updated within the run loop.
      *
      * @static
      * @method registerContext
@@ -306,14 +298,13 @@ define(function(require, exports, module) {
     };
 
     /**
-     * Queue a function to be executed on the next tick of the {@link
-     *    Engine}.  The function's only argument will be the
-     *    JS window object.
+     * Queue a function to be executed on the next tick of the
+     *    Engine.
      *
      * @static
      * @method nextTick
      *
-     * @param {Function} fn
+     * @param {function(Object)} fn function accepting window object
      */
     Engine.nextTick = function nextTick(fn) {
         nextTickQueue.push(fn);

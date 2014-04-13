@@ -13,9 +13,9 @@ define(function(require, exports, module) {
 
     /**
      *  A wall describes an infinite two-dimensional plane that physics bodies
-     *  can collide with. To define a wall, you must give it a distance (from
-     *  the center of the physics engine's origin, and a normal defining the plane
-     *  of the wall.
+     *    can collide with. To define a wall, you must give it a distance (from
+     *    the center of the physics engine's origin, and a normal defining the plane
+     *    of the wall.
      *
      *    (wall)
      *      |
@@ -43,7 +43,7 @@ define(function(require, exports, module) {
         this.impulse = new Vector();
 
         Constraint.call(this);
-    };
+    }
 
     Wall.prototype = Object.create(Constraint.prototype);
     Wall.prototype.constructor = Wall;
@@ -140,9 +140,9 @@ define(function(require, exports, module) {
      * @method setOptions
      * @param options {Objects}
      */
-    Wall.prototype.setOptions = function(options) {
+    Wall.prototype.setOptions = function setOptions(options) {
         if (options.normal !== undefined) {
-            if (options.normal instanceof Vector) this.options.normal = options.normal;
+            if (options.normal instanceof Vector) this.options.normal = options.normal.clone();
             if (options.normal instanceof Array)  this.options.normal = new Vector(options.normal);
         }
         if (options.restitution !== undefined) this.options.restitution = options.restitution;
@@ -154,22 +154,22 @@ define(function(require, exports, module) {
 
     function _getNormalVelocity(n, v) {
         return v.dot(n);
-    };
+    }
 
     function _getDistanceFromOrigin(p) {
         var n = this.options.normal;
         var d = this.options.distance;
         return p.dot(n) + d;
-    };
+    }
 
     function _onEnter(particle, overlap, dt) {
-        var p = particle.position,
-            v = particle.velocity,
-            m = particle.mass,
-            n = this.options.normal,
-            action = this.options.onContact,
-            restitution = this.options.restitution,
-            impulse = this.impulse;
+        var p = particle.position;
+        var v = particle.velocity;
+        var m = particle.mass;
+        var n = this.options.normal;
+        var action = this.options.onContact;
+        var restitution = this.options.restitution;
+        var impulse = this.impulse;
 
         var drift = this.options.drift;
         var slop = -this.options.slop;
@@ -185,7 +185,7 @@ define(function(require, exports, module) {
             case Wall.ON_CONTACT.REFLECT:
                 var lambda = (overlap < slop)
                     ? -((1 + restitution) * n.dot(v) + drift / dt * (overlap - slop)) / (m * dt + gamma)
-                    : -((1 + restitution) * n.dot(v)) / (m * dt + gamma)
+                    : -((1 + restitution) * n.dot(v)) / (m * dt + gamma);
 
                 impulse.set(n.mult(dt * lambda));
                 particle.applyImpulse(impulse);
@@ -194,17 +194,17 @@ define(function(require, exports, module) {
         }
 
         if (this._eventOutput) this._eventOutput.emit('postCollision', data);
-    };
+    }
 
     function _onExit(particle, overlap, dt) {
         var action = this.options.onContact;
         var p = particle.position;
         var n = this.options.normal;
 
-        if (action == Wall.ON_CONTACT.REFLECT) {
+        if (action === Wall.ON_CONTACT.REFLECT) {
             particle.setPosition(p.add(n.mult(-overlap)));
         }
-    };
+    }
 
     /**
      * Adds an impulse to a physics body's velocity due to the wall constraint
@@ -214,14 +214,14 @@ define(function(require, exports, module) {
      * @param source {Body}         The source of the constraint
      * @param dt {Number}           Delta time
      */
-    Wall.prototype.applyConstraint = function(targets, source, dt) {
+    Wall.prototype.applyConstraint = function applyConstraint(targets, source, dt) {
         var n = this.options.normal;
 
         for (var i = 0; i < targets.length; i++) {
-            var particle = targets[i],
-                p = particle.position,
-                v = particle.velocity,
-                r = particle.radius || 0;
+            var particle = targets[i];
+            var p = particle.position;
+            var v = particle.velocity;
+            var r = particle.radius || 0;
 
             var overlap = _getDistanceFromOrigin.call(this, p.add(n.mult(-r)));
             var nv = _getNormalVelocity.call(this, n, v);

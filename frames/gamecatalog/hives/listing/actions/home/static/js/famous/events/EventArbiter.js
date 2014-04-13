@@ -19,30 +19,31 @@ define(function(require, exports, module) {
      * @class EventArbiter
      * @constructor
      *
-     * @param {number | string} startMode initial setting of switch,
+     * @param {Number | string} startMode initial setting of switch,
      */
     function EventArbiter(startMode) {
         this.dispatchers = {};
         this.currMode = undefined;
         this.setMode(startMode);
-    };
+    }
 
     /**
-     * Set switch to this mode, passing events to the corresopnding
-     *   EventHandler.  If mode has changed, emits 'unpipe'
-     *   event to the  old mode's handler and a 'pipe' event and 'change'
-     *   event to the new mode's handler, passing along object {from: startMode, to: endMode}.
+     * Set switch to this mode, passing events to the corresponding
+     *   EventHandler.  If mode has changed, emits 'change' event,
+     *   emits 'unpipe' event to the old mode's handler, and emits 'pipe'
+     *   event to the new mode's handler.
      *
      * @method setMode
      *
      * @param {string | number} mode indicating which event handler to send to.
      */
-    EventArbiter.prototype.setMode = function(mode) {
-        if(mode != this.currMode) {
+    EventArbiter.prototype.setMode = function setMode(mode) {
+        if (mode !== this.currMode) {
             var startMode = this.currMode;
-            if(this.dispatchers[this.currMode]) this.dispatchers[this.currMode].emit('unpipe');
+
+            if (this.dispatchers[this.currMode]) this.dispatchers[this.currMode].trigger('unpipe');
             this.currMode = mode;
-            if(this.dispatchers[mode]) this.dispatchers[mode].emit('pipe');
+            if (this.dispatchers[mode]) this.dispatchers[mode].emit('pipe');
             this.emit('change', {from: startMode, to: mode});
         }
     };
@@ -55,28 +56,28 @@ define(function(require, exports, module) {
      *
      * @param {string | number} mode mode to which this eventHandler corresponds
      *
-     * @return {EventHandler} eventHandler behind this mode's "switch"
+     * @return {EventHandler} eventHandler corresponding to this mode
      */
-    EventArbiter.prototype.forMode = function(mode) {
-        if(!this.dispatchers[mode]) this.dispatchers[mode] = new EventHandler();
+    EventArbiter.prototype.forMode = function forMode(mode) {
+        if (!this.dispatchers[mode]) this.dispatchers[mode] = new EventHandler();
         return this.dispatchers[mode];
     };
 
     /**
-     * Send event to currently selected handler.
+     * Trigger an event, sending to currently selected handler, if
+     *   it is listening for provided 'type' key.
      *
      * @method emit
      *
-     * @param {string} eventType
-     * @param {object} event
-     *
-     * @return {boolean} true if the event was handled by at a leaf handler.
+     * @param {string} eventType event type key (for example, 'click')
+     * @param {Object} event event data
+     * @return {EventHandler} this
      */
-    EventArbiter.prototype.emit = function(eventType, event) {
-        if(this.currMode == undefined) return false;
-        if(!event) event = {};
+    EventArbiter.prototype.emit = function emit(eventType, event) {
+        if (this.currMode === undefined) return false;
+        if (!event) event = {};
         var dispatcher = this.dispatchers[this.currMode];
-        if(dispatcher) return dispatcher.emit(eventType, event);
+        if (dispatcher) return dispatcher.trigger(eventType, event);
     };
 
     module.exports = EventArbiter;

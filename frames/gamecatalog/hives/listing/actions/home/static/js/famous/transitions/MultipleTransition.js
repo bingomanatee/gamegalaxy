@@ -11,11 +11,11 @@ define(function(require, exports, module) {
     var Utility = require('famous/utilities/Utility');
 
     /**
-     * @class Multiple value transition method
-     * @description Transition meta-method to support transitioning multiple
-     *   values with scalar-only methods
+     * Transition meta-method to support transitioning multiple
+     *   values with scalar-only methods.
      *
-     * @name MultipleTransition
+     *
+     * @class MultipleTransition
      * @constructor
      *
      * @param {Object} method Transionable class to multiplex
@@ -24,28 +24,51 @@ define(function(require, exports, module) {
         this.method = method;
         this._instances = [];
         this.state = [];
-    };
+    }
 
     MultipleTransition.SUPPORTS_MULTIPLE = true;
 
-    MultipleTransition.prototype.get = function() {
-        for(var i = 0; i < this._instances.length; i++) {
+    /**
+     * Get the state of each transition.
+     *
+     * @method get
+     *
+     * @return state {Number|Array} state array
+     */
+    MultipleTransition.prototype.get = function get() {
+        for (var i = 0; i < this._instances.length; i++) {
             this.state[i] = this._instances[i].get();
         }
         return this.state;
     };
 
-    MultipleTransition.prototype.set = function(endState, transition, callback) {
-        var _allCallback = Utility.after(endState.length, callback)
-        for(var i = 0; i < endState.length; i++) {
-            if(!this._instances[i]) this._instances[i] = new (this.method)();
+    /**
+     * Set the end states with a shared transition, with optional callback.
+     *
+     * @method set
+     *
+     * @param {Number|Array} endState Final State.  Use a multi-element argument for multiple transitions.
+     * @param {Object} transition Transition definition, shared among all instances
+     * @param {Function} callback called when all endStates have been reached.
+     */
+    MultipleTransition.prototype.set = function set(endState, transition, callback) {
+        var _allCallback = Utility.after(endState.length, callback);
+        for (var i = 0; i < endState.length; i++) {
+            if (!this._instances[i]) this._instances[i] = new (this.method)();
             this._instances[i].set(endState[i], transition, _allCallback);
         }
     };
 
-    MultipleTransition.prototype.reset = function(startState) {
-        for(var i = 0; i < startState.length; i++) {
-            if(!this._instances[i]) this._instances[i] = new (this.method)();
+    /**
+     * Reset all transitions to start state.
+     *
+     * @method reset
+     *
+     * @param  {Number|Array} startState Start state
+     */
+    MultipleTransition.prototype.reset = function reset(startState) {
+        for (var i = 0; i < startState.length; i++) {
+            if (!this._instances[i]) this._instances[i] = new (this.method)();
             this._instances[i].reset(startState[i]);
         }
     };

@@ -21,7 +21,7 @@ define(function(require, exports, module) {
      *    transform matrix, an opacity constant, a size, an origin specifier.
      *    Modifier objects can be added to any RenderNode or object
      *    capable of displaying renderables.  The Modifier's children and descendants
-     *    are transformed by the amounts specified in the modifier's properties.
+     *    are transformed by the amounts specified in the Modifier's properties.
      *
      * @class Modifier
      * @constructor
@@ -57,7 +57,8 @@ define(function(require, exports, module) {
     }
 
     /**
-     * Source transform matrix from the provided function, object, or static transform matrix.
+     * Function, object, or static transform matrix which provides the transform.
+     *   This is evaluated on every tick of the engine.
      *
      * @method transformFrom
      *
@@ -75,7 +76,7 @@ define(function(require, exports, module) {
     };
 
     /**
-     * Source opacity from the provided function, object, or primitive number.
+     * Set function, object, or number to provide opacity, in range [0,1].
      *
      * @method opacityFrom
      *
@@ -93,7 +94,8 @@ define(function(require, exports, module) {
     };
 
     /**
-     * Source origin from the provided function, object, or numerical array.
+     * Set function, object, or numerical array to provide origin, as [x,y],
+     *   where x and y are in the range [0,1].
      *
      * @method originFrom
      *
@@ -112,7 +114,7 @@ define(function(require, exports, module) {
     };
 
     /**
-     * Source size from the provided function, object, or numerical array.
+     * Set function, object, or numerical array to provide size, as [width, height].
      *
      * @method sizeFrom
      *
@@ -134,7 +136,7 @@ define(function(require, exports, module) {
      * @deprecated
      * @method setTransform
      *
-     * @param {Transform} transform Transform to transition to.
+     * @param {Transform} transform Transform to transition to
      * @param {Transitionable} transition Valid transitionable object
      * @param {Function} callback callback to call after transition completes
      * @return {Modifier} this
@@ -157,7 +159,7 @@ define(function(require, exports, module) {
      * @deprecated
      * @method setOpacity
      *
-     * @param {Number} number Opacity value to transition to.
+     * @param {Number} opacity Opacity value to transition to.
      * @param {Transitionable} transition Valid transitionable object
      * @param {Function} callback callback to call after transition completes
      * @return {Modifier} this
@@ -189,7 +191,7 @@ define(function(require, exports, module) {
         if (transition || this._legacyStates.origin) {
 
             if (!this._legacyStates.origin) {
-                this._legacyStates.origin = new Transitionable(this._output.origin);
+                this._legacyStates.origin = new Transitionable(this._output.origin || [0, 0]);
             }
             if (!this._originGetter) this.originFrom(this._legacyStates.origin);
 
@@ -203,7 +205,7 @@ define(function(require, exports, module) {
      * Deprecated: Prefer sizeFrom with static origin array, or use a Transitionable with that size.
      * @deprecated
      * @method setSize
-     * @param {Array.Number} origin two element array with values between 0 and 1.
+     * @param {Array.Number} size two element array of [width, height]
      * @param {Transitionable} transition Valid transitionable object
      * @param {Function} callback callback to call after transition completes
      * @return {Modifier} this
@@ -222,6 +224,7 @@ define(function(require, exports, module) {
     };
 
     /**
+     * Deprecated: Prefer to stop transform in your provider object.
      * @deprecated
      * @method halt
      */

@@ -19,12 +19,12 @@ define(function(require, exports, module) {
      * @extends Force
      * @param {Object} options options to set on drag
      */
-    function Drag(options){
+    function Drag(options) {
         this.options = Object.create(this.constructor.DEFAULT_OPTIONS);
         if (options) this.setOptions(options);
 
         Force.call(this);
-    };
+    }
 
     Drag.prototype = Object.create(Force.prototype);
     Drag.prototype.constructor = Drag;
@@ -44,7 +44,9 @@ define(function(require, exports, module) {
          * @param {Vector} velocity
          * @return {Vector} drag force
          */
-        LINEAR : function(velocity){ return velocity; },
+        LINEAR : function(velocity) {
+            return velocity;
+        },
 
         /**
          * A drag force proportional to the square of the velocity
@@ -53,7 +55,9 @@ define(function(require, exports, module) {
          * @param {Vector} velocity
          * @return {Vector} drag force
          */
-        QUADRATIC : function(velocity){ return velocity.mult(velocity.norm()); }
+        QUADRATIC : function(velocity) {
+            return velocity.mult(velocity.norm());
+        }
     };
 
     /**
@@ -87,15 +91,15 @@ define(function(require, exports, module) {
      * @method applyForce
      * @param targets {Array.Body} Array of bodies to apply drag force to.
      */
-    Drag.prototype.applyForce = function(targets){
+    Drag.prototype.applyForce = function applyForce(targets) {
         var strength        = this.options.strength;
         var forceFunction   = this.options.forceFunction;
         var force           = this.force;
-        for (var index = 0; index < targets.length; index++){
+        for (var index = 0; index < targets.length; index++) {
             var particle = targets[index];
             forceFunction(particle.velocity).mult(-strength).put(force);
             particle.applyForce(force);
-        };
+        }
     };
 
     /**
@@ -104,7 +108,7 @@ define(function(require, exports, module) {
      * @method setOptions
      * @param {Objects} options
      */
-    Drag.prototype.setOptions = function(options){
+    Drag.prototype.setOptions = function setOptions(options) {
         for (var key in options) this.options[key] = options[key];
     };
 

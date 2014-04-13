@@ -9,20 +9,19 @@
 
 define(function(require, exports, module) {
     var Drag = require('./Drag');
-    var Vector = require('famous/math/Vector');
 
     /**
      * Rotational drag is a force that opposes angular velocity.
-     * Attach it to a physics body to slow down its rotation.
+     *   Attach it to a physics body to slow down its rotation.
      *
      * @class RotationalDrag
      * @constructor
      * @extends Force
      * @param {Object} options options to set on drag
      */
-    function RotationalDrag(options){
+    function RotationalDrag(options) {
         Drag.call(this, options);
-    };
+    }
 
     RotationalDrag.prototype = Object.create(Drag.prototype);
     RotationalDrag.prototype.constructor = RotationalDrag;
@@ -42,19 +41,23 @@ define(function(require, exports, module) {
          * A drag force proprtional to the angular velocity
          * @attribute LINEAR
          * @type Function
-         * @param {Vector} velocity
+         * @param {Vector} angularVelocity
          * @return {Vector} drag force
          */
-        LINEAR : function(angularVelocity){ return angularVelocity; },
+        LINEAR : function(angularVelocity) {
+            return angularVelocity;
+        },
 
         /**
          * A drag force proprtional to the square of the angular velocity
          * @attribute QUADRATIC
          * @type Function
-         * @param {Vector} velocity
+         * @param {Vector} angularVelocity
          * @return {Vector} drag force
          */
-        QUADRATIC : function(angularVelocity){ return angularVelocity.mult(angularVelocity.norm()); }
+        QUADRATIC : function(angularVelocity) {
+            return angularVelocity.mult(angularVelocity.norm());
+        }
     };
 
     /**
@@ -63,17 +66,17 @@ define(function(require, exports, module) {
      * @method applyForce
      * @param targets {Array.Body} Array of bodies to apply drag force to.
      */
-    RotationalDrag.prototype.applyForce = function(targets){
+    RotationalDrag.prototype.applyForce = function applyForce(targets) {
         var strength       = this.options.strength;
         var forceFunction  = this.options.forceFunction;
         var force          = this.force;
 
         //TODO: rotational drag as function of inertia
-        for (var index = 0; index < targets.length; index++){
+        for (var index = 0; index < targets.length; index++) {
             var particle = targets[index];
             forceFunction(particle.angularVelocity).mult(-100*strength).put(force);
             particle.applyTorque(force);
-        };
+        }
     };
 
     /*
@@ -82,7 +85,7 @@ define(function(require, exports, module) {
      * @method setOptions
      * @param {Objects} options
      */
-    RotationalDrag.prototype.setOptions = function(options){
+    RotationalDrag.prototype.setOptions = function setOptions(options) {
         for (var key in options) this.options[key] = options[key];
     };
 

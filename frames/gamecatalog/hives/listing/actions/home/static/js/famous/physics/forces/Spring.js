@@ -13,14 +13,14 @@ define(function(require, exports, module) {
 
     /**
      *  A force that moves a physics body to a location with a spring motion.
-     *  The body can be moved to another physics body, or an anchor point.
+     *    The body can be moved to another physics body, or an anchor point.
      *
      *  @class Spring
      *  @constructor
      *  @extends Force
      *  @param {Object} options options to set on drag
      */
-    function Spring(options){
+    function Spring(options) {
         this.options = Object.create(this.constructor.DEFAULT_OPTIONS);
         if (options) this.setOptions(options);
 
@@ -29,8 +29,7 @@ define(function(require, exports, module) {
 
         _init.call(this);
         Force.call(this);
-    };
-
+    }
 
     Spring.prototype = Object.create(Force.prototype);
     Spring.prototype.constructor = Spring;
@@ -54,10 +53,10 @@ define(function(require, exports, module) {
          * @param {Number} rMax maximum range of influence
          * @return {Number} unscaled force
          */
-        FENE : function (dist, rMax){
+        FENE : function(dist, rMax) {
             var rMaxSmall = rMax * .99;
             var r = Math.max(Math.min(dist, rMaxSmall), -rMaxSmall);
-            return r / (1 - r * r/(rMax * rMax))
+            return r / (1 - r * r/(rMax * rMax));
         },
 
         /**
@@ -68,7 +67,7 @@ define(function(require, exports, module) {
          * @param {Number} dist current distance target is from source body
          * @return {Number} unscaled force
          */
-        HOOK : function(dist){
+        HOOK : function(dist) {
             return dist;
         }
     };
@@ -137,25 +136,25 @@ define(function(require, exports, module) {
         forceFunction : Spring.FORCE_FUNCTIONS.HOOK
     };
 
-    function _setForceFunction(fn){
+    function _setForceFunction(fn) {
         this.forceFunction = fn;
     }
 
-    function _calcStiffness(){
+    function _calcStiffness() {
         var options = this.options;
         options.stiffness = Math.pow(2 * pi / options.period, 2);
     }
 
-    function _calcDamping(){
+    function _calcDamping() {
         var options = this.options;
-        options.damping = 4 * pi * options.dampingRatio / options.period ;
+        options.damping = 4 * pi * options.dampingRatio / options.period;
     }
 
-    function _calcEnergy(strength, dist){
+    function _calcEnergy(strength, dist) {
         return 0.5 * strength * dist * dist;
     }
 
-    function _init(){
+    function _init() {
         _setForceFunction.call(this, this.options.forceFunction);
         _calcStiffness.call(this);
         _calcDamping.call(this);
@@ -167,8 +166,8 @@ define(function(require, exports, module) {
      * @method setOptions
      * @param options {Objects}
      */
-    Spring.prototype.setOptions = function(options){
-        if (options.anchor !== undefined){
+    Spring.prototype.setOptions = function setOptions(options) {
+        if (options.anchor !== undefined) {
             if (options.anchor.position instanceof Vector) this.options.anchor = options.anchor.position;
             if (options.anchor   instanceof Vector)  this.options.anchor = options.anchor;
             if (options.anchor   instanceof Array)  this.options.anchor = new Vector(options.anchor);
@@ -188,7 +187,7 @@ define(function(require, exports, module) {
      * @method applyForce
      * @param targets {Array.Body} Array of bodies to apply force to.
      */
-    Spring.prototype.applyForce = function(targets, source){
+    Spring.prototype.applyForce = function applyForce(targets, source) {
         var force        = this.force;
         var disp         = this.disp;
         var options      = this.options;
@@ -199,12 +198,12 @@ define(function(require, exports, module) {
         var lMax         = options.maxLength;
         var anchor       = options.anchor || source.position;
 
-        for (var i = 0; i < targets.length; i++){
+        for (var i = 0; i < targets.length; i++) {
             var target = targets[i];
             var p2 = target.position;
             var v2 = target.velocity;
 
-            disp.set(anchor.sub(p2));
+            anchor.sub(p2).put(disp);
             var dist = disp.norm() - restLength;
 
             if (dist === 0) return;
@@ -214,11 +213,12 @@ define(function(require, exports, module) {
             stiffness *= m;
             damping   *= m;
 
-            force.set(disp.normalize(stiffness * this.forceFunction(dist, lMax)));
+            disp.normalize(stiffness * this.forceFunction(dist, lMax))
+                .put(force);
 
             if (damping)
-                if (source) force.set(force.add(v2.sub(source.velocity).mult(-damping)));
-                else        force.set(force.add(v2.mult(-damping)));
+                if (source) force.add(v2.sub(source.velocity).mult(-damping)).put(force);
+                else        force.add(v2.mult(-damping)).put(force);
 
             target.applyForce(force);
             if (source) source.applyForce(force.mult(-1));
@@ -234,11 +234,11 @@ define(function(require, exports, module) {
      * @param target {Body}     The physics body attached to the spring
      * @return energy {Number}
      */
-    Spring.prototype.getEnergy = function(target){
+    Spring.prototype.getEnergy = function getEnergy(target) {
         var options        = this.options;
-        var restLength  = options.length,
-            anchor      = options.anchor,
-            strength    = options.stiffness;
+        var restLength  = options.length;
+        var anchor      = options.anchor;
+        var strength    = options.stiffness;
 
         var dist = anchor.sub(target.position).norm() - restLength;
         return 0.5 * strength * dist * dist;
@@ -250,7 +250,7 @@ define(function(require, exports, module) {
      * @method setAnchor
      * @param anchor {Array}    New anchor of the spring
      */
-    Spring.prototype.setAnchor = function(anchor){
+    Spring.prototype.setAnchor = function setAnchor(anchor) {
         if (!this.options.anchor) this.options.anchor = new Vector();
         this.options.anchor.set(anchor);
     };

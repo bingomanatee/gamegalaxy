@@ -8,15 +8,36 @@
  */
 
 define(function(require, exports, module) {
+    /**
+     * A few static methods.
+     *
+     * @class Utilities
+     * @static
+     */
     var Utilities = {};
 
-    Utilities.clamp = function(value, range) {
+    /**
+     * Constrain input to range.
+     *
+     * @method clamp
+     * @param {Number} value input
+     * @param {Array.Number} range [min, max]
+     * @static
+     */
+    Utilities.clamp = function clamp(value, range) {
         return Math.max(Math.min(value, range[1]), range[0]);
     };
 
-    Utilities.length = function(array){
+    /**
+     * Euclidean length of numerical array.
+     *
+     * @method length
+     * @param {Array.Number} array array of numbers
+     * @static
+     */
+    Utilities.length = function length(array) {
         var distanceSquared = 0;
-        for (var i = 0; i < array.length; i++){
+        for (var i = 0; i < array.length; i++) {
             distanceSquared += array[i] * array[i];
         }
         return Math.sqrt(distanceSquared);

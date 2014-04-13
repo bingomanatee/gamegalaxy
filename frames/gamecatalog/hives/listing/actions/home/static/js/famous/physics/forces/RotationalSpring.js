@@ -10,7 +10,6 @@
 //TODO: test inheritance
 define(function(require, exports, module) {
     var Spring = require('./Spring');
-    var Vector = require('famous/math/Vector');
 
     /**
      *  A force that rotates a physics body back to target Euler angles.
@@ -23,9 +22,9 @@ define(function(require, exports, module) {
      *  @extends Spring
      *  @param {Object} options options to set on drag
      */
-    function RotationalSpring(options){
+    function RotationalSpring(options) {
         Spring.call(this, options);
-    };
+    }
 
     RotationalSpring.prototype = Object.create(Spring.prototype);
     RotationalSpring.prototype.constructor = RotationalSpring;
@@ -39,7 +38,7 @@ define(function(require, exports, module) {
      * @method applyForce
      * @param targets {Array.Body} Array of bodies to apply torque to.
      */
-    RotationalSpring.prototype.applyForce = function(targets){
+    RotationalSpring.prototype.applyForce = function applyForce(targets) {
         var force        = this.force;
         var options      = this.options;
         var disp         = this.disp;
@@ -49,7 +48,7 @@ define(function(require, exports, module) {
         var restLength   = options.length;
         var anchor       = options.anchor;
 
-        for (var i = 0; i < targets.length; i++){
+        for (var i = 0; i < targets.length; i++) {
             var target = targets[i];
 
             disp.set(anchor.sub(target.orientation));
@@ -64,7 +63,7 @@ define(function(require, exports, module) {
 
             force.set(disp.normalize(stiffness * this.forceFunction(dist, this.options.lMax)));
 
-            if (damping) force.set(force.add(target.w.mult(-damping)));
+            if (damping) force.set(force.add(target.angularVelocity.mult(-damping)));
 
             target.applyTorque(force);
         }
@@ -76,11 +75,11 @@ define(function(require, exports, module) {
      * @method getEnergy
      * @param {Body} target The physics body attached to the spring
      */
-    RotationalSpring.prototype.getEnergy = function(target){
+    RotationalSpring.prototype.getEnergy = function getEnergy(target) {
         var options     = this.options;
-        var restLength  = options.length,
-            anchor      = options.anchor,
-            strength    = options.stiffness;
+        var restLength  = options.length;
+        var anchor      = options.anchor;
+        var strength    = options.stiffness;
 
         var dist = anchor.sub(target.orientation).norm() - restLength;
         return 0.5 * strength * dist * dist;

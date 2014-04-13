@@ -12,13 +12,9 @@ define(function(require, exports, module) {
     var TweenTransition = require('./TweenTransition');
 
     /**
-     *
-     * @class Transitionable
-     *
-     * @description  A state maintainer for a smooth transition between
+     * A state maintainer for a smooth transition between
      *    numerically-specified states. Example numeric states include floats or
-     *    {@link FamousMatrix} objects. Transitionables form the basis
-     *    of {@link FamousTransform} objects.
+     *    Transform objects.
      *
      * An initial state is set with the constructor or set(startState). A
      *    corresponding end state and transition are set with set(endState,
@@ -31,34 +27,9 @@ define(function(require, exports, module) {
      *    the only way to trigger callbacks. Usually this kind of object would
      *    be part of the render() path of a visible component.
      *
-     * @name Transitionable
+     * @class Transitionable
      * @constructor
-     * @example
-     *   function FamousFader(state, transition) {
-     *     if(typeof state == 'undefined') state = 0;
-     *     if(typeof transition == 'undefined') transition = true;
-     *     this.transitionHelper = new Transitionable(state);
-     *     this.transition = transition;
-     *   };
-     *
-     *   FamousFader.prototype = {
-     *     show: function(callback) {
-     *       this.set(1, this.transition, callback);
-     *     },
-     *     hide: function(callback) {
-     *       this.set(0, this.transition, callback);
-     *     },
-     *     set: function(state, transition, callback) {
-     *       this.transitionHelper.halt();
-     *       this.transitionHelper.set(state, transition, callback);
-     *     },
-     *     render: function(target) {
-     *       var currOpacity = this.transitionHelper.get();
-     *       return {opacity: currOpacity, target: target};
-     *     }
-     *   };
-     *
-     * @param {number|Array.<number>|Object.<number|string, number>} start
+     * @param {number|Array.Number|Object.<number|string, number>} start
      *    beginning state
      */
     function Transitionable(start) {
@@ -73,20 +44,20 @@ define(function(require, exports, module) {
         this._currentMethod = null;
 
         this.set(start);
-    };
+    }
 
     var transitionMethods = {};
 
-    Transitionable.registerMethod = function(name, engineClass) {
-        if(!(name in transitionMethods)) {
+    Transitionable.registerMethod = function registerMethod(name, engineClass) {
+        if (!(name in transitionMethods)) {
             transitionMethods[name] = engineClass;
             return true;
         }
         else return false;
     };
 
-    Transitionable.unregisterMethod = function(name) {
-        if(name in transitionMethods) {
+    Transitionable.unregisterMethod = function unregisterMethod(name) {
+        if (name in transitionMethods) {
             delete transitionMethods[name];
             return true;
         }
@@ -94,12 +65,12 @@ define(function(require, exports, module) {
     };
 
     function _loadNext() {
-        if(this._callback) {
+        if (this._callback) {
             var callback = this._callback;
             this._callback = undefined;
             callback();
         }
-        if(this.actionQueue.length <= 0) {
+        if (this.actionQueue.length <= 0) {
             this.set(this.get()); // no update required
             return;
         }
@@ -109,16 +80,16 @@ define(function(require, exports, module) {
         var method = null;
         var endValue = this.currentAction[0];
         var transition = this.currentAction[1];
-        if(transition instanceof Object && transition.method) {
+        if (transition instanceof Object && transition.method) {
             method = transition.method;
-            if(typeof method === 'string') method = transitionMethods[method];
+            if (typeof method === 'string') method = transitionMethods[method];
         }
         else {
             method = TweenTransition;
         }
 
-        if(this._currentMethod !== method) {
-            if(!(endValue instanceof Object) || method.SUPPORTS_MULTIPLE === true || endValue.length <= method.SUPPORTS_MULTIPLE) {
+        if (this._currentMethod !== method) {
+            if (!(endValue instanceof Object) || method.SUPPORTS_MULTIPLE === true || endValue.length <= method.SUPPORTS_MULTIPLE) {
                 this._engineInstance = new method();
             }
             else {
@@ -130,17 +101,16 @@ define(function(require, exports, module) {
         this._engineInstance.reset(this.state, this.velocity);
         if (this.velocity !== undefined) transition.velocity = this.velocity;
         this._engineInstance.set(endValue, transition, _loadNext.bind(this));
-    };
+    }
 
     /**
      * Add transition to end state to the queue of pending transitions. Special
      *    Use: calling without a transition resets the object to that state with
      *    no pending actions
      *
-     * @name Transitionable#set
-     * @function
+     * @method set
      *
-     * @param {number|FamousMatrix|Array.<number>|Object.<number, number>} endState
+     * @param {number|FamousMatrix|Array.Number|Object.<number, number>} endState
      *    end state to which we interpolate
      * @param {transition=} transition object of type {duration: number, curve:
      *    f[0,1] -> [0,1] or name}. If transition is omitted, change will be
@@ -148,30 +118,29 @@ define(function(require, exports, module) {
      * @param {function()=} callback Zero-argument function to call on observed
      *    completion (t=1)
      */
-    Transitionable.prototype.set = function(endState, transition, callback) {
-        if(!transition) {
+    Transitionable.prototype.set = function set(endState, transition, callback) {
+        if (!transition) {
             this.reset(endState);
-            if(callback) callback();
+            if (callback) callback();
             return this;
         }
 
         var action = [endState, transition];
         this.actionQueue.push(action);
         this.callbackQueue.push(callback);
-        if(!this.currentAction) _loadNext.call(this);
+        if (!this.currentAction) _loadNext.call(this);
         return this;
     };
 
     /**
      * Cancel all transitions and reset to a stable state
      *
-     * @name Transitionable#reset
-     * @function
+     * @method reset
      *
-     * @param {number|Array.<number>|Object.<number, number>} startState
+     * @param {number|Array.Number|Object.<number, number>} startState
      *    stable state to set to
      */
-    Transitionable.prototype.reset = function(startState, startVelocity) {
+    Transitionable.prototype.reset = function reset(startState, startVelocity) {
         this._currentMethod = null;
         this._engineInstance = null;
         this.state = startState;
@@ -184,32 +153,33 @@ define(function(require, exports, module) {
     /**
      * Add delay action to the pending action queue queue.
      *
-     * @name Transitionable#delay
-     * @function
+     * @method delay
      *
      * @param {number} duration delay time (ms)
-     * @param {function()} callback Zero-argument function to call on observed
+     * @param {function} callback Zero-argument function to call on observed
      *    completion (t=1)
      */
-    Transitionable.prototype.delay = function(duration, callback) {
-        this.set(this._engineInstance.get(), {duration: duration, curve: function() { return 0; }}, callback);
+    Transitionable.prototype.delay = function delay(duration, callback) {
+        this.set(this._engineInstance.get(), {duration: duration,
+            curve: function() {
+                return 0;
+            }},
+            callback);
     };
 
     /**
      * Get interpolated state of current action at provided time. If the last
-     *    action has completed, invoke its callback. TODO: What if people want
-     *    timestamp == 0?
+     *    action has completed, invoke its callback.
      *
-     * @name Transitionable#get
-     * @function
+     * @method get
      *
      * @param {number=} timestamp Evaluate the curve at a normalized version of this
      *    time. If omitted, use current time. (Unix epoch time)
-     * @returns {number|Object.<number|string, number>} beginning state
+     * @return {number|Object.<number|string, number>} beginning state
      *    interpolated to this point in time.
      */
-    Transitionable.prototype.get = function(timestamp) {
-        if(this._engineInstance){
+    Transitionable.prototype.get = function get(timestamp) {
+        if (this._engineInstance) {
             if (this._engineInstance.getVelocity)
                 this.velocity = this._engineInstance.getVelocity();
             this.state = this._engineInstance.get(timestamp);
@@ -220,22 +190,20 @@ define(function(require, exports, module) {
     /**
      * Is there at least one action pending completion?
      *
-     * @name Transitionable#isActive
-     * @function
+     * @method isActive
      *
-     * @returns {boolean}
+     * @return {boolean}
      */
-    Transitionable.prototype.isActive = function() {
+    Transitionable.prototype.isActive = function isActive() {
         return !!this.currentAction;
     };
 
     /**
      * Halt transition at current state and erase all pending actions.
      *
-     * @name Transitionable#halt
-     * @function
+     * @method halt
      */
-    Transitionable.prototype.halt = function() {
+    Transitionable.prototype.halt = function halt() {
         this.set(this.get());
     };
 

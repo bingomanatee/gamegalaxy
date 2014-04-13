@@ -29,7 +29,7 @@ define(function(require, exports, module) {
         _createComponents.call(this, options.sides || this.options.sides);
 
         Constraint.call(this);
-    };
+    }
 
     Walls.prototype = Object.create(Constraint.prototype);
     Walls.prototype.constructor = Walls;
@@ -135,12 +135,12 @@ define(function(require, exports, module) {
     };
 
     var _SIDE_NORMALS = {
-        0 : new Vector( 1, 0, 0),
+        0 : new Vector(1, 0, 0),
         1 : new Vector(-1, 0, 0),
-        2 : new Vector( 0, 1, 0),
-        3 : new Vector( 0,-1, 0),
-        4 : new Vector( 0, 0, 1),
-        5 : new Vector( 0, 0,-1)
+        2 : new Vector(0, 1, 0),
+        3 : new Vector(0,-1, 0),
+        4 : new Vector(0, 0, 1),
+        5 : new Vector(0, 0,-1)
     };
 
     function _getDistance(side, size, origin) {
@@ -167,7 +167,7 @@ define(function(require, exports, module) {
                 break;
         }
         return distance;
-    };
+    }
 
     /*
      * Setter for options.
@@ -175,7 +175,7 @@ define(function(require, exports, module) {
      * @method setOptions
      * @param options {Objects}
      */
-    Walls.prototype.setOptions = function(options) {
+    Walls.prototype.setOptions = function setOptions(options) {
         var resizeFlag = false;
         if (options.restitution !== undefined) _setOptionsForEach.call(this, {restitution : options.restitution});
         if (options.drift !== undefined) _setOptionsForEach.call(this, {drift : options.drift});
@@ -198,7 +198,7 @@ define(function(require, exports, module) {
                 distance : _getDistance(side, this.options.size, this.options.origin)
             });
         }
-    };
+    }
 
     /*
      * Setter for size.
@@ -206,23 +206,25 @@ define(function(require, exports, module) {
      * @method setOptions
      * @param options {Objects}
      */
-    Walls.prototype.setSize = function(size, origin) {
+    Walls.prototype.setSize = function setSize(size, origin) {
         origin = origin || this.options.origin;
         if (origin.length < 3) origin[2] = 0.5;
 
         this.forEach(function(wall, side) {
             var d = _getDistance(side, size, origin);
             wall.setOptions({distance : d});
-        })
+        });
 
         this.options.size   = size;
         this.options.origin = origin;
     };
 
     function _setOptionsForEach(options) {
-        this.forEach(function(wall) { wall.setOptions(options) })
+        this.forEach(function(wall) {
+            wall.setOptions(options);
+        });
         for (var key in options) this.options[key] = options[key];
-    };
+    }
 
     /**
      * Adds an impulse to a physics body's velocity due to the walls constraint
@@ -232,8 +234,10 @@ define(function(require, exports, module) {
      * @param source {Body}         The source of the constraint
      * @param dt {Number}           Delta time
      */
-    Walls.prototype.applyConstraint = function(targets, source, dt) {
-        this.forEach(function(wall) { wall.applyConstraint(targets, source, dt); })
+    Walls.prototype.applyConstraint = function applyConstraint(targets, source, dt) {
+        this.forEach(function(wall) {
+            wall.applyConstraint(targets, source, dt);
+        });
     };
 
     /**
@@ -242,7 +246,7 @@ define(function(require, exports, module) {
      * @method applyConstraint
      * @param fn {Function}  Function that takes in a wall as its first parameter
      */
-    Walls.prototype.forEach = function(fn) {
+    Walls.prototype.forEach = function forEach(fn) {
         for (var key in this.sides) fn(this.sides[key], key);
     };
 
@@ -252,11 +256,11 @@ define(function(require, exports, module) {
      * @method applyConstraint
      * @param angle {Function}
      */
-    Walls.prototype.rotateZ = function(angle) {
+    Walls.prototype.rotateZ = function rotateZ(angle) {
         this.forEach(function(wall) {
             var n = wall.options.normal;
             n.rotateZ(angle).put(n);
-        })
+        });
     };
 
     /**
@@ -265,11 +269,11 @@ define(function(require, exports, module) {
      * @method applyConstraint
      * @param angle {Function}
      */
-    Walls.prototype.rotateX = function(angle) {
+    Walls.prototype.rotateX = function rotateX(angle) {
         this.forEach(function(wall) {
             var n = wall.options.normal;
             n.rotateX(angle).put(n);
-        })
+        });
     };
 
     /**
@@ -278,11 +282,11 @@ define(function(require, exports, module) {
      * @method applyConstraint
      * @param angle {Function}
      */
-    Walls.prototype.rotateY = function(angle) {
+    Walls.prototype.rotateY = function rotateY(angle) {
         this.forEach(function(wall) {
             var n = wall.options.normal;
             n.rotateY(angle).put(n);
-        })
+        });
     };
 
     module.exports = Walls;

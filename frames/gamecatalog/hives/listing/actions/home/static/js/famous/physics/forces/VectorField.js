@@ -13,14 +13,14 @@ define(function(require, exports, module) {
 
     /**
      *  A force that moves a physics body to a location with a spring motion.
-     *  The body can be moved to another physics body, or an anchor point.
+     *    The body can be moved to another physics body, or an anchor point.
      *
-     *  @class Spring
+     *  @class VectorField
      *  @constructor
      *  @extends Force
      *  @param {Object} options options to set on drag
      */
-    function VectorField(options){
+    function VectorField(options) {
         this.options = Object.create(VectorField.DEFAULT_OPTIONS);
         if (options) this.setOptions(options);
 
@@ -29,7 +29,7 @@ define(function(require, exports, module) {
 
         //registers
         this.evaluation = new Vector(0,0,0);
-    };
+    }
 
     VectorField.prototype = Object.create(Force.prototype);
     VectorField.prototype.constructor = VectorField;
@@ -50,7 +50,9 @@ define(function(require, exports, module) {
          *      Pass a {direction : Vector} into the VectorField options
          * @return {Number} unscaled force
          */
-        CONSTANT : function(v, options){ return v.set(options.direction); },
+        CONSTANT : function(v, options) {
+            return v.set(options.direction);
+        },
 
         /**
          * Linear force
@@ -59,7 +61,9 @@ define(function(require, exports, module) {
          * @param v {Vector} Current position of physics body
          * @return {Number} unscaled force
          */
-        LINEAR : function(v){ return v; },
+        LINEAR : function(v) {
+            return v;
+        },
 
         /**
          * Radial force, e.g., Hookean spring
@@ -68,7 +72,9 @@ define(function(require, exports, module) {
          * @param v {Vector} Current position of physics body
          * @return {Number} unscaled force
          */
-        RADIAL : function(v){ return v.set(v.mult(-1, v)); },
+        RADIAL : function(v) {
+            return v.set(v.mult(-1, v));
+        },
 
         /**
          * Spherical force
@@ -79,7 +85,9 @@ define(function(require, exports, module) {
          *      Pass a {radius : Number} into the VectorField options
          * @return {Number} unscaled force
          */
-        SPHERE_ATTRACTOR : function(v, options){ return v.set(v.mult((options.radius - v.norm()) / v.norm())); },
+        SPHERE_ATTRACTOR : function(v, options) {
+            return v.set(v.mult((options.radius - v.norm()) / v.norm()));
+        },
 
         /**
          * Point attractor force, e.g., Hookean spring with an anchor
@@ -90,7 +98,9 @@ define(function(require, exports, module) {
          *      Pass a {position : Vector} into the VectorField options
          * @return {Number} unscaled force
          */
-        POINT_ATTRACTOR : function(v, options){ return v.set(options.position.sub(v)); }
+        POINT_ATTRACTOR : function(v, options) {
+            return v.set(options.position.sub(v));
+        }
     };
 
     /**
@@ -125,14 +135,14 @@ define(function(require, exports, module) {
      * @method setOptions
      * @param {Objects} options
      */
-    VectorField.prototype.setOptions = function(options){
+    VectorField.prototype.setOptions = function setOptions(options) {
         for (var key in options) this.options[key] = options[key];
     };
 
-    function _setFieldOptions(field){
+    function _setFieldOptions(field) {
         var FIELDS = VectorField.FIELDS;
 
-        switch (field){
+        switch (field) {
             case FIELDS.CONSTANT:
                 if (!this.options.direction) this.options.direction = new Vector(0,1,0);
                 break;
@@ -145,12 +155,12 @@ define(function(require, exports, module) {
         }
     }
 
-    function _evaluate(v){
+    function _evaluate(v) {
         var evaluation = this.evaluation;
         var field = this.options.field;
         evaluation.set(v);
         return field(evaluation, this.options);
-    };
+    }
 
     /**
      * Adds the vectorfield's force to a physics body's force accumulator.
@@ -158,16 +168,16 @@ define(function(require, exports, module) {
      * @method applyForce
      * @param targets {Array.body} Array of bodies to apply force to.
      */
-    VectorField.prototype.applyForce = function(targets){
+    VectorField.prototype.applyForce = function applyForce(targets) {
         var force = this.force;
-        for (var i = 0; i < targets.length; i++){
+        for (var i = 0; i < targets.length; i++) {
             var particle = targets[i];
             force.set(
                 _evaluate.call(this, particle.position)
                 .mult(particle.mass * this.options.strength)
             );
             particle.applyForce(force);
-        };
+        }
     };
 
     module.exports = VectorField;

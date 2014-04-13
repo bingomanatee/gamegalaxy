@@ -18,11 +18,11 @@ define(function(require, exports, module) {
      * @uses EventHandler
      * @constructor
      */
-    function Force(force){
+    function Force(force) {
         this.force = new Vector(force);
         this._energy = 0.0;
         this._eventOutput = null;
-    };
+    }
 
     /**
      * Basic setter for options
@@ -30,7 +30,7 @@ define(function(require, exports, module) {
      * @method setOptions
      * @param options {Objects}
      */
-    Force.prototype.setOptions = function(options){
+    Force.prototype.setOptions = function setOptions(options) {
         for (var key in options) this.options[key] = options[key];
     };
 
@@ -40,7 +40,7 @@ define(function(require, exports, module) {
      * @method applyForce
      * @param body {Body}
      */
-    Force.prototype.applyForce = function(body){
+    Force.prototype.applyForce = function applyForce(body) {
         body.applyForce(this.force);
     };
 
@@ -50,7 +50,7 @@ define(function(require, exports, module) {
      * @method getEnergy
      * @return energy {Number}
      */
-    Force.prototype.getEnergy = function(){
+    Force.prototype.getEnergy = function getEnergy() {
         return this._energy;
     };
 
@@ -60,7 +60,7 @@ define(function(require, exports, module) {
      * @method setEnergy
      * @param energy {Number}
      */
-    Force.prototype.setEnergy = function(energy){
+    Force.prototype.setEnergy = function setEnergy(energy) {
         this._energy = energy;
     };
 
@@ -68,13 +68,26 @@ define(function(require, exports, module) {
         this._eventOutput = new EventHandler();
         this._eventOutput.bindThis(this);
         EventHandler.setOutputHandler(this, this._eventOutput);
-    };
+    }
 
-    Force.prototype.on = function() { _createEventOutput.call(this); return this.on.apply(this, arguments); }
-    Force.prototype.addListener = function() { _createEventOutput.call(this); return this.addListener.apply(this, arguments); }
-    Force.prototype.pipe = function() { _createEventOutput.call(this); return this.pipe.apply(this, arguments); }
-    Force.prototype.removeListener = function() { return this.removeListener.apply(this, arguments); }
-    Force.prototype.unpipe = function() { return this.unpipe.apply(this, arguments); }
+    Force.prototype.on = function on() {
+        _createEventOutput.call(this);
+        return this.on.apply(this, arguments);
+    };
+    Force.prototype.addListener = function addListener() {
+        _createEventOutput.call(this);
+        return this.addListener.apply(this, arguments);
+    };
+    Force.prototype.pipe = function pipe() {
+        _createEventOutput.call(this);
+        return this.pipe.apply(this, arguments);
+    };
+    Force.prototype.removeListener = function removeListener() {
+        return this.removeListener.apply(this, arguments);
+    };
+    Force.prototype.unpipe = function unpipe() {
+        return this.unpipe.apply(this, arguments);
+    };
 
     module.exports = Force;
 });

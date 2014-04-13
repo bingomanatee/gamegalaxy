@@ -9,7 +9,7 @@
 
 define(function(require, exports, module) {
     /**
-     * This represents a channel for events.
+     * EventEmitter represents a channel for events.
      *
      * @class EventEmitter
      * @constructor
@@ -21,13 +21,13 @@ define(function(require, exports, module) {
 
     /**
      * Trigger an event, sending to all downstream handlers
-     *   matching provided 'type' key.
+     *   listening for provided 'type' key.
      *
      * @method emit
      *
      * @param {string} type event type key (for example, 'click')
      * @param {Object} event event data
-     * @return {EventEmitter} this
+     * @return {EventHandler} this
      */
     EventEmitter.prototype.emit = function emit(type, event) {
         var handlers = this.listeners[type];
@@ -40,13 +40,13 @@ define(function(require, exports, module) {
     };
 
     /**
-     * Bind a handler function to an event type handled by this object.
+     * Bind a callback function to an event type handled by this object.
      *
-     * @method on&nbsp;
+     * @method "on"
      *
      * @param {string} type event type key (for example, 'click')
      * @param {function(string, Object)} handler callback
-     * @return {EventEmitter} this
+     * @return {EventHandler} this
      */
    EventEmitter.prototype.on = function on(type, handler) {
         if (!(type in this.listeners)) this.listeners[type] = [];
@@ -56,14 +56,14 @@ define(function(require, exports, module) {
     };
 
     /**
-     * Alias for "on()
+     * Alias for "on".
      * @method addListener
      */
     EventEmitter.prototype.addListener = EventEmitter.prototype.on;
 
    /**
      * Unbind an event by type and handler.
-     *   This undoes the work of "on()".
+     *   This undoes the work of "on".
      *
      * @method removeListener
      *
@@ -78,7 +78,7 @@ define(function(require, exports, module) {
     };
 
     /**
-     * Call event handlers with this set to owner
+     * Call event handlers with this set to owner.
      *
      * @method bindThis
      *

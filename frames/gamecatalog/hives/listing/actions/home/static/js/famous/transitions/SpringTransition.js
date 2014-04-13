@@ -13,8 +13,17 @@ define(function(require, exports, module) {
     var Spring = require('famous/physics/forces/Spring');
     var Vector = require('famous/math/Vector');
 
-    /** @constructor */
-    function SpringTransition(state){
+    /**
+     * SpringTransition is a method of transitioning between two values (numbers,
+     * or arrays of numbers) with a bounce. The transition will overshoot the target
+     * state depending on the parameters of the transition.
+     *
+     * @class SpringTransition
+     * @constructor
+     *
+     * @param {Number|Array} [state=0] Initial state
+     */
+    function SpringTransition(state) {
         state = state || 0;
         this.endState  = new Vector(state);
         this.initState = new Vector();
@@ -33,14 +42,86 @@ define(function(require, exports, module) {
     }
 
     SpringTransition.SUPPORTS_MULTIPLE = 3;
+
+    /**
+     * @property SpringTransition.DEFAULT_OPTIONS
+     * @type Object
+     * @protected
+     * @static
+     */
     SpringTransition.DEFAULT_OPTIONS = {
-        period       : 300,
+
+        /**
+         * The amount of time in milliseconds taken for one complete oscillation
+         * when there is no damping
+         *    Range : [0, Infinity]
+         *
+         * @attribute period
+         * @type Number
+         * @default 300
+         */
+        period : 300,
+
+        /**
+         * The damping of the snap.
+         *    Range : [0, 1]
+         *    0 = no damping, and the spring will oscillate forever
+         *    1 = critically damped (the spring will never oscillate)
+         *
+         * @attribute dampingRatio
+         * @type Number
+         * @default 0.5
+         */
         dampingRatio : 0.5,
-        velocity     : 0
+
+        /**
+         * The initial velocity of the transition.
+         *
+         * @attribute velocity
+         * @type Number|Array
+         * @default 0
+         */
+        velocity : 0
+    };
+
+    function _getEnergy() {
+        return this.particle.getEnergy() + this.spring.getEnergy(this.particle);
     }
 
-    function _update(){
-        if (this.PE.isSleeping()){
+    function _setParticlePosition(p) {
+        this.particle.setPosition(p);
+    }
+
+    function _setParticleVelocity(v) {
+        this.particle.setVelocity(v);
+    }
+
+    function _getParticlePosition() {
+        return (this._dimensions === 0)
+            ? this.particle.getPosition1D()
+            : this.particle.getPosition();
+    }
+
+    function _getParticleVelocity() {
+        return (this._dimensions === 0)
+            ? this.particle.getVelocity1D()
+            : this.particle.getVelocity();
+    }
+
+    function _setCallback(callback) {
+        this._callback = callback;
+    }
+
+    function _wake() {
+        this.PE.wake();
+    }
+
+    function _sleep() {
+        this.PE.sleep();
+    }
+
+    function _update() {
+        if (this.PE.isSleeping()) {
             if (this._callback) {
                 var cb = this._callback;
                 this._callback = undefined;
@@ -56,75 +137,48 @@ define(function(require, exports, module) {
         }
     }
 
-    function _getEnergy(){
-        return this.particle.getEnergy() + this.spring.getEnergy(this.particle);
-    }
-
-    function _setupDefinition(def){
+    function _setupDefinition(definition) {
         var defaults = SpringTransition.DEFAULT_OPTIONS;
-        if (def.period === undefined)       def.period       = defaults.period;
-        if (def.dampingRatio === undefined) def.dampingRatio = defaults.dampingRatio;
-        if (def.velocity === undefined)     def.velocity     = defaults.velocity;
+        if (definition.period === undefined)       definition.period       = defaults.period;
+        if (definition.dampingRatio === undefined) definition.dampingRatio = defaults.dampingRatio;
+        if (definition.velocity === undefined)     definition.velocity     = defaults.velocity;
 
-        if (def.period < 150) console.warn('period may be unstable, increase the period or use a stiff transition');
+        if (definition.period < 150) {
+            definition.period = 150;
+            console.warn('The period of a SpringTransition is capped at 150 ms. Use a SnapTransition for faster transitions');
+        }
 
         //setup spring
         this.spring.setOptions({
-            period       : def.period,
-            dampingRatio : def.dampingRatio
+            period       : definition.period,
+            dampingRatio : definition.dampingRatio
         });
 
         //setup particle
-        _setParticleVelocity.call(this, def.velocity);
+        _setParticleVelocity.call(this, definition.velocity);
     }
 
-    function _setAbsoluteRestTolerance(){
+    function _setAbsoluteRestTolerance() {
         var distance = this.endState.sub(this.initState).normSquared();
         this._absRestTolerance = (distance === 0)
             ? this._restTolerance
             : this._restTolerance * distance;
     }
 
-    function _setTarget(target){
+    function _setTarget(target) {
         this.endState.set(target);
         _setAbsoluteRestTolerance.call(this);
     }
 
-    function _wake(){
-        this.PE.wake();
-    }
-
-    function _sleep(){
-        this.PE.sleep();
-    }
-
-    function _setParticlePosition(p){
-        this.particle.setPosition(p);
-    }
-
-    function _setParticleVelocity(v){
-        this.particle.setVelocity(v);
-    }
-
-    function _getParticlePosition(){
-        var p = this.particle.getPosition(); //vector
-        return (this._dimensions === 0)
-            ? p.x
-            : p.get();
-    }
-
-    function _getParticleVelocity(){
-        var v = this.particle.getVelocity(); //vector
-        return (this._dimensions === 0)
-            ? v.x
-            : v.get();
-    }
-
-    function _setCallback(callback){
-        this._callback = callback;
-    }
-
-    SpringTransition.prototype.reset = function(pos, vel){
+    /**
+     * Resets the position and velocity
+     *
+     * @method reset
+     *
+     * @param {Number|Array.Number} pos positional state
+     * @param {Number|Array} vel velocity
+     */
+    SpringTransition.prototype.reset = function reset(pos, vel) {
         this._dimensions = (pos instanceof Array)
             ? pos.length
             : 0;
@@ -134,28 +188,74 @@ define(function(require, exports, module) {
         _setTarget.call(this, pos);
         if (vel) _setParticleVelocity.call(this, vel);
         _setCallback.call(this, undefined);
-    }
+    };
 
-    SpringTransition.prototype.getVelocity = function(){
+    /**
+     * Getter for velocity
+     *
+     * @method getVelocity
+     *
+     * @return {Number|Array} velocity
+     */
+    SpringTransition.prototype.getVelocity = function getVelocity() {
         return _getParticleVelocity.call(this);
-    }
+    };
 
-    SpringTransition.prototype.setVelocity = function(v){
+    /**
+     * Setter for velocity
+     *
+     * @method setVelocity
+     *
+     * @return {Number|Array} velocity
+     */
+    SpringTransition.prototype.setVelocity = function setVelocity(v) {
         this.call(this, _setParticleVelocity(v));
-    }
+    };
 
-    SpringTransition.prototype.halt = function(){
+    /**
+     * Detects whether a transition is in progress
+     *
+     * @method isActive
+     *
+     * @return {Boolean}
+     */
+    SpringTransition.prototype.isActive = function isActive() {
+        return !this.PE.isSleeping();
+    };
+
+    /**
+     * Halt the transition
+     *
+     * @method halt
+     */
+    SpringTransition.prototype.halt = function halt() {
         this.set(this.get());
-    }
+    };
 
-    SpringTransition.prototype.get = function(){
+    /**
+     * Get the current position of the transition
+     *
+     * @method get
+     *
+     * @return {Number|Array} state
+     */
+    SpringTransition.prototype.get = function get() {
         _update.call(this);
         return _getParticlePosition.call(this);
-    }
+    };
 
-    SpringTransition.prototype.set = function(endState, definition, callback){
-        if (!definition){
-            this.reset(endState)
+    /**
+     * Set the end position and transition, with optional callback on completion.
+     *
+     * @method set
+     *
+     * @param  {Number|Array} endState Final state
+     * @param {Object}  definition  Transition definition
+     * @param  {Function} callback Callback
+     */
+    SpringTransition.prototype.set = function set(endState, definition, callback) {
+        if (!definition) {
+            this.reset(endState);
             if (callback) callback();
             return;
         }
@@ -168,7 +268,7 @@ define(function(require, exports, module) {
         _setupDefinition.call(this, definition);
         _setTarget.call(this, endState);
         _setCallback.call(this, callback);
-    }
+    };
 
     module.exports = SpringTransition;
 });

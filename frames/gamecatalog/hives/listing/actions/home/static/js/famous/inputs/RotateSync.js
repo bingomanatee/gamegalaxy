@@ -11,52 +11,32 @@ define(function(require, exports, module) {
     var TwoFingerSync = require('./TwoFingerSync');
 
     /**
-     * @class Handles piped in two-finger touch events to support rotation.
-     *        Outputs an object with position, velocity, touch ids, and angle.
-     * @description
+     * Handles piped in two-finger touch events to increase or decrease scale via pinching / expanding.
+     *   Emits 'start', 'update' and 'end' events an object with position, velocity, touch ids, and angle.
+     *   Useful for determining a rotation factor from initial two-finger touch.
+     *
+     * @class RotateSync
      * @extends TwoFingerSync
-     * @name RotateSync
      * @constructor
-     * @example
-     * define(function(require, exports, module) {
-     *     var Engine = require('famous/core/Engine');
-     *     var RotateSync = require('famous/input/RotateSync');
-     *     var Surface = require('famous/core/Surface');
-     *     var Modifier = require('famous/core/Modifier');
-     *     var FM = require('famous/core/Matrix');
-     *     var Context = Engine.createContext();
-     *
-     *     var surface = new Surface({
-     *         size: [200,200],
-     *         properties: {
-     *             backgroundColor: 'red'
-     *         }
-     *     });
-     *
-     *     var modifier = new Modifier({
-     *         transform: undefined
-     *     });
-     *
-     *     var position = 0;
-     *     var sync = new RotateSync(function(){
-     *         return position;
-     *     }, {direction: RotateSync.DIRECTION_Y});
-     *
-     *     surface.pipe(sync);
-     *     sync.on('update', function(data) {
-     *         position = data.p;
-     *         modifier.setTransform(FM.rotateZ(position));
-     *         surface.setContent('position' + position + '<br>' + 'velocity' + data.v.toFixed(2) + '<br>' + 'distance' + data.distance);
-     *     });
-     *     Context.link(modifier).link(surface);
-     * });
+     * @param {function} legacyGetter position getter object (deprecated)
+     * @param {Object} options default options overrides
      */
-    function RotateSync(targetSync,options) {
-        TwoFingerSync.call(this,targetSync,options);
-        this._angle = undefined;
+    function RotateSync(legacyGetter, options) {
+        if (arguments.length === 2){
+            this._legacyPositionGetter = arguments[0];
+            options = arguments[1];
+        }
+        else {
+            this._legacyPositionGetter = null;
+            options = arguments[0];
+        }
+
+        TwoFingerSync.call(this, this._legacyPositionGetter, options);
+        this._angle = 0;
     }
 
     RotateSync.prototype = Object.create(TwoFingerSync.prototype);
+    RotateSync.prototype.constructor = RotateSync;
 
     function _calcAngle(posA, posB) {
         var diffX = posB[0] - posA[0];
@@ -66,8 +46,11 @@ define(function(require, exports, module) {
 
     RotateSync.prototype._startUpdate = function _startUpdate(event) {
         this._angle = _calcAngle(this.posA, this.posB);
-        this._vel = 0;
-        this.output.emit('start', {count: event.touches.length, touches: [this.touchAId, this.touchBId], angle: this._angle});
+        this.output.emit('start', {
+            count: event.touches.length,
+            touches: [this.touchAId, this.touchBId],
+            angle: this._angle
+        });
     };
 
     RotateSync.prototype._moveUpdate = function _moveUpdate(diffTime) {
@@ -75,13 +58,28 @@ define(function(require, exports, module) {
         var diffTheta = currAngle - this._angle;
         var velTheta = diffTheta / diffTime;
 
-        var prevPos = this.targetGet();
+        var prevPos = this._legacyPositionGetter ? this._legacyPositionGetter() : 0;
         var scale = this.options.scale;
-        this.output.emit('update', {p: prevPos + scale * diffTheta, v: scale * velTheta, touches: [this.touchAId, this.touchBId], angle: currAngle});
+
+        this.output.emit('update', {
+            delta : diffTheta,
+            position: prevPos + scale*diffTheta,
+            velocity: scale*velTheta,
+            touches: [this.touchAId, this.touchBId],
+            angle: currAngle
+        });
 
         this._angle = currAngle;
-        this._vel = velTheta;
     };
 
+    /**
+     * See TwoFingerSync.setOptions
+     * @method setOptions
+     */
+
+    /**
+     * See TwoFingerSync.getOptions
+     * @method getOptions
+     */
     module.exports = RotateSync;
 });

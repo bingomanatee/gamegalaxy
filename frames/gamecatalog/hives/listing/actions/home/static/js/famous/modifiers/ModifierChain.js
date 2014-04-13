@@ -10,82 +10,57 @@
 define(function(require, exports, module) {
 
     /**
-     *
-     * @class ModifierChain
-     *
-     * @description A class to add and remove a chain of modifiers
+     * A class to add and remove a chain of modifiers
      *   at a single point in the render tree
      *
-     * @name ModifierChain
+     * @class ModifierChain
      * @constructor
-     * @example
-     *   var Engine        = require('famous/core/Engine');
-     *   var Surface       = require('famous/core/Surface');
-     *   var Modifier      = require('famous/core/Modifier');
-     *   var Transform     = require('famous/core/Transform');
-     *   var ModifierChain = require('famous/modifiers/ModifierChain');
-     *
-     *   var Context = Engine.createContext();
-     *
-     *   var surface = new FamousSurface({
-     *       size: [200, 200],
-     *       properties: { backgroundColor: '#3cf'}
-     *   });
-     *
-     *   var m1 = new Modifier(Transform.translate(400,0,0));
-     *   var m2 = new Modifier(Transform.translate(0,100,0));
-     *
-     *   var modifierChain = new ModifierChain(M1, M2);
-     *
-     *   Context.add(modifierChain).link(surface);
-     *
-     *   modifierChain.removeModifier(m2);
-     *
      */
     function ModifierChain() {
         this._chain = [];
         if (arguments.length) this.add.apply(this, arguments);
-    };
+    }
 
     /**
      * Add a modifier, or comma separated modifiers, to the modifier chain.
      *
-     * @name Modifier#addModifier
-     * @function
+     * @method addModifier
      *
-     * @param {...Modifier}
+     * @param {...Modifier*} varargs args list of Modifiers
      */
-    ModifierChain.prototype.addModifier = function() {
+    ModifierChain.prototype.addModifier = function addModifier(varargs) {
         Array.prototype.push.apply(this._chain, arguments);
     };
 
     /**
      * Remove a modifier from the modifier chain.
      *
-     * @name Modifier#removeModifier
-     * @function
+     * @method removeModifier
      *
-     * @param {Modifier}
+     * @param {Modifier} modifier
      */
-    ModifierChain.prototype.removeModifier = function(modifier) {
+    ModifierChain.prototype.removeModifier = function removeModifier(modifier) {
         var index = this._chain.indexOf(modifier);
         if (index < 0) return;
         this._chain.splice(index, 1);
     };
 
     /**
-     * Render a modifier chain
+     * Return render spec for this Modifier, applying to the provided
+     *    target component.  This is similar to render() for Surfaces.
      *
-     * @name Modifier#modify
-     * @function
+     * @private
+     * @method modify
      *
-     * @param {renderSpec}
-     * @returns {renderSpec}
+     * @param {Object} input (already rendered) render spec to
+     *    which to apply the transform.
+     * @return {Object} render spec for this Modifier, including the
+     *    provided target
      */
-    ModifierChain.prototype.modify = function(input){
+    ModifierChain.prototype.modify = function modify(input) {
         var chain  = this._chain;
         var result = input;
-        for (var i = 0; i < chain.length; i++){
+        for (var i = 0; i < chain.length; i++) {
             result = chain[i].modify(result);
         }
         return result;

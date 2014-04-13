@@ -22,14 +22,14 @@ define(function(require, exports, module) {
      * @class ScrollContainer
      * @constructor
      * @param {Options} [options] An object of configurable options.
-     * @param {Options} [surface=undefined] Options for the ScrollContainer instance's surface.
-     * @param {Options} [scrollview={direction:Utility.Direction.X}]  Options for the ScrollContainer instance's scrollview.
+     * @param {Options} [options.surface=undefined] Options for the ScrollContainer instance's surface.
+     * @param {Options} [options.scrollview={direction:Utility.Direction.X}]  Options for the ScrollContainer instance's scrollview.
      */
     function ScrollContainer(options) {
         this.options = Object.create(ScrollContainer.DEFAULT_OPTIONS);
         this._optionsManager = new OptionsManager(this.options);
 
-        if(options) this.setOptions(options);
+        if (options) this.setOptions(options);
 
         this.container = new ContainerSurface(this.options.container);
         this.scrollview = new Scrollview(this.options.scrollview);
@@ -54,7 +54,7 @@ define(function(require, exports, module) {
      * @method setOptions
      * @param {Options} options An object of configurable options for the ScrollContainer instance.
      */
-    ScrollContainer.prototype.setOptions = function(options) {
+    ScrollContainer.prototype.setOptions = function setOptions(options) {
         return this._optionsManager.setOptions(options);
     };
 
@@ -64,11 +64,18 @@ define(function(require, exports, module) {
      * @method sequenceFrom
      * @param {Array|ViewSequence} sequence Either an array of renderables or a Famous ViewSequence.
      */
-    ScrollContainer.prototype.sequenceFrom = function() {
+    ScrollContainer.prototype.sequenceFrom = function sequenceFrom() {
         return this.scrollview.sequenceFrom.apply(this.scrollview, arguments);
     };
 
-    ScrollContainer.prototype.render = function() {
+    /**
+     * Generate a render spec from the contents of this component.
+     *
+     * @private
+     * @method render
+     * @return {number} Render spec for this component
+     */
+    ScrollContainer.prototype.render = function render() {
         return this.container.render.apply(this.container, arguments);
     };
 

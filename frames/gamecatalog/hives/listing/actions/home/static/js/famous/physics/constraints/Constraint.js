@@ -18,11 +18,11 @@ define(function(require, exports, module) {
      *  @uses EventHandler
      *  @param options {Object}
      */
-    function Constraint(){
+    function Constraint() {
         this.options = this.options || {};
         this._energy = 0.0;
         this._eventOutput = null;
-    };
+    }
 
     /*
      * Setter for options.
@@ -30,7 +30,7 @@ define(function(require, exports, module) {
      * @method setOptions
      * @param options {Objects}
      */
-    Constraint.prototype.setOptions = function(options){
+    Constraint.prototype.setOptions = function setOptions(options) {
         for (var key in options) this.options[key] = options[key];
     };
 
@@ -39,7 +39,7 @@ define(function(require, exports, module) {
      *
      * @method applyConstraint
      */
-    Constraint.prototype.applyConstraint = function(){};
+    Constraint.prototype.applyConstraint = function applyConstraint() {};
 
     /**
      * Getter for energy
@@ -47,7 +47,7 @@ define(function(require, exports, module) {
      * @method getEnergy
      * @return energy {Number}
      */
-    Constraint.prototype.getEnergy = function(){
+    Constraint.prototype.getEnergy = function getEnergy() {
         return this._energy;
     };
 
@@ -57,7 +57,7 @@ define(function(require, exports, module) {
      * @method setEnergy
      * @param energy {Number}
      */
-    Constraint.prototype.setEnergy = function(energy){
+    Constraint.prototype.setEnergy = function setEnergy(energy) {
         this._energy = energy;
     };
 
@@ -65,13 +65,26 @@ define(function(require, exports, module) {
         this._eventOutput = new EventHandler();
         this._eventOutput.bindThis(this);
         EventHandler.setOutputHandler(this, this._eventOutput);
-    };
+    }
 
-    Constraint.prototype.on = function() { _createEventOutput.call(this); return this.on.apply(this, arguments); }
-    Constraint.prototype.addListener = function() { _createEventOutput.call(this); return this.addListener.apply(this, arguments); }
-    Constraint.prototype.pipe = function() { _createEventOutput.call(this); return this.pipe.apply(this, arguments); }
-    Constraint.prototype.removeListener = function() { return this.removeListener.apply(this, arguments); }
-    Constraint.prototype.unpipe = function() { return this.unpipe.apply(this, arguments); }
+    Constraint.prototype.on = function on() {
+        _createEventOutput.call(this);
+        return this.on.apply(this, arguments);
+    };
+    Constraint.prototype.addListener = function addListener() {
+        _createEventOutput.call(this);
+        return this.addListener.apply(this, arguments);
+    };
+    Constraint.prototype.pipe = function pipe() {
+        _createEventOutput.call(this);
+        return this.pipe.apply(this, arguments);
+    };
+    Constraint.prototype.removeListener = function removeListener() {
+        return this.removeListener.apply(this, arguments);
+    };
+    Constraint.prototype.unpipe = function unpipe() {
+        return this.unpipe.apply(this, arguments);
+    };
 
     module.exports = Constraint;
 });

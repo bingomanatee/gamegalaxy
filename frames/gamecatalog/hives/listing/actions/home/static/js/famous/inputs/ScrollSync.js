@@ -8,58 +8,40 @@
  */
 
 define(function(require, exports, module) {
-    /**
-     * @class Handles piped in mousewheel events. Can be used as delegate of
-     *        GenericSync.
-     * @description
-     * @name ScrollSync
-     * @constructor
-     * @example
-     * define(function(require, exports, module) {
-     *     var Engine = require('famous/core/Engine');
-     *     var Surface = require('famous/core/Surface');
-     *     var Modifier = require('famous/core/Modifier');
-     *     var FM = require('famous/core/Matrix');
-     *     var ScrollSync = require('famous/input/ScrollSync');
-     *     var Context = Engine.createContext();
-     *
-     *     var surface = new Surface({
-     *         size: [200,200],
-     *         properties: {
-     *             backgroundColor: 'red'
-     *         }
-     *     });
-     *
-     *     var modifier = new Modifier({
-     *         transform: undefined
-     *     });
-     *
-     *     var position = 0;
-     *     var sync = new ScrollSync(function(){
-     *         return position;
-     *     }, {direction: ScrollSync.DIRECTION_Y});
-     *
-     *     surface.pipe(sync);
-     *     sync.on('update', function(data) {
-     *         var edge = window.innerHeight - (surface.getSize()[1])
-     *         if (data.p > edge) {
-     *             position = edge;
-     *         } else if (data.p < 0) {
-     *             position = 0;
-     *         } else {
-     *             position = data.p;
-     *         }
-     *         modifier.setTransform(FM.translate(0, position, 0));
-     *         surface.setContent('position' + position + '<br>' + 'velocity' + data.v.toFixed(2));
-     *     });
-     *     Context.link(modifier).link(surface);
-     * });
-     */
-    var FEH = require('famous/core/EventHandler');
-    var FE = require('famous/core/Engine');
 
-    function ScrollSync(targetGet, options) {
-        this.targetGet = targetGet || null;
+    var EventHandler = require('famous/core/EventHandler');
+    var Engine = require('famous/core/Engine');
+
+    /**
+     * Handles piped in mousewheel events.
+     *   Emits 'start', 'update', and 'end' events with payloads including:
+     *   delta: change since last position,
+     *   position: accumulated deltas,
+     *   velocity: speed of change in pixels per ms,
+     *   slip: true (unused).
+     *
+     *   Can be used as delegate of GenericSync.
+     *
+     * @class ScrollSync
+     * @constructor
+     * @param {function} legacyGetter position getter function (deprecated)
+     * @param {Object} [options] overrides of default options
+     * @param {Number} [options.direction] Pay attention to x changes (ScrollSync.DIRECTION_X),
+     *   y changes (ScrollSync.DIRECTION_Y) or both (undefined)
+     * @param {Number} [options.minimumEndSpeed] End speed calculation floors at this number, in pixels per ms
+     * @param {boolean} [options.rails] whether to snap position calculations to nearest axis
+     * @param {Number | Array.Number} [options.scale] scale outputs in by scalar or pair of scalars
+     * @param {Number} [options.stallTime] reset time for velocity calculation in ms
+     */
+    function ScrollSync(legacyGetter, options) {
+        if (arguments.length === 2){
+            this._legacyPositionGetter = arguments[0];
+            options = arguments[1];
+        }
+        else {
+            this._legacyPositionGetter = null;
+            options = arguments[0];
+        }
 
         this.options = {
             direction: undefined,
@@ -73,11 +55,18 @@ define(function(require, exports, module) {
         if (options) this.setOptions(options);
         else this.setOptions(this.options);
 
-        this.input = new FEH();
-        this.output = new FEH();
+        this._payload = {
+            delta    : null,
+            position : null,
+            velocity : null,
+            slip     : true
+        };
 
-        FEH.setInputHandler(this, this.input);
-        FEH.setOutputHandler(this, this.output);
+        this.input = new EventHandler();
+        this.output = new EventHandler();
+
+        EventHandler.setInputHandler(this, this.input);
+        EventHandler.setOutputHandler(this, this.output);
 
         this._prevTime = undefined;
         this._prevVel = undefined;
@@ -88,36 +77,46 @@ define(function(require, exports, module) {
         this._loopBound = false;
     }
 
-    /** @const */ ScrollSync.DIRECTION_X = 0;
-    /** @const */ ScrollSync.DIRECTION_Y = 1;
+    ScrollSync.DIRECTION_X = 0;
+    ScrollSync.DIRECTION_Y = 1;
 
     function _newFrame() {
         var now = Date.now();
         if (this.inProgress && now - this._prevTime > this.options.stallTime) {
-            var pos = this.targetGet ? this.targetGet() : 0;
+            var pos = (this.options.direction === undefined)
+                ? this._legacyPositionGetter ? this._legacyPositionGetter : [0,0]
+                : this._legacyPositionGetter ? this._legacyPositionGetter : 0;
+
             this.inProgress = false;
             var finalVel = 0;
+
             if (Math.abs(this._prevVel) >= this.options.minimumEndSpeed) finalVel = this._prevVel;
-            this.output.emit('end', {p: pos, v: finalVel, slip: true});
+
+            var payload = this._payload;
+            payload.position = pos;
+            payload.velocity = finalVel;
+            payload.slip = true;
+
+            this.output.emit('end', payload);
         }
     }
 
-    function _handleMove(e) {
-        e.preventDefault();
+    function _handleMove(event) {
+        event.preventDefault();
         if (!this.inProgress) {
             this.inProgress = true;
             this.output.emit('start', {slip: true});
             if (!this._loopBound) {
-                FE.on('prerender', _newFrame.bind(this));
+                Engine.on('prerender', _newFrame.bind(this));
                 this._loopBound = true;
             }
         }
 
-        var prevTime = this._prevTime;
-        var diffX = (e.wheelDeltaX !== undefined) ? e.wheelDeltaX : -e.deltaX;
-        var diffY = (e.wheelDeltaY !== undefined) ? e.wheelDeltaY : -e.deltaY;
+        var prevTime = this._prevTime || Date.now();
+        var diffX = (event.wheelDeltaX !== undefined) ? event.wheelDeltaX : -event.deltaX;
+        var diffY = (event.wheelDeltaY !== undefined) ? event.wheelDeltaY : -event.deltaY;
 
-        if (e.deltaMode === 1) { // units in lines, not pixels
+        if (event.deltaMode === 1) { // units in lines, not pixels
             diffX *= this.options.lineHeight;
             diffY *= this.options.lineHeight;
         }
@@ -134,36 +133,66 @@ define(function(require, exports, module) {
         var velX = diffX / diffTime;
         var velY = diffY / diffTime;
 
-        var prevPos = this.targetGet ? this.targetGet() : 0;
-
+        var prevPos;
         var scale = this.options.scale;
-
         var nextPos;
         var nextVel;
+        var nextDelta;
 
         if (this.options.direction === ScrollSync.DIRECTION_X) {
-            nextPos = prevPos + scale * diffX;
+            prevPos = this._legacyPositionGetter ? this._legacyPositionGetter() : 0;
+            nextDelta = scale * diffX;
+            nextPos = prevPos + nextDelta;
             nextVel = scale * velX;
         }
         else if (this.options.direction === ScrollSync.DIRECTION_Y) {
-            nextPos = prevPos + scale * diffY;
+            prevPos = this._legacyPositionGetter ? this._legacyPositionGetter() : 0;
+            nextDelta = scale * diffY;
+            nextPos = prevPos + nextDelta;
             nextVel = scale * velY;
         }
         else {
-            nextPos = [prevPos[0] + scale * diffX, prevPos[1] + scale * diffY];
+            prevPos = this._legacyPositionGetter ? this._legacyPositionGetter() : [0,0];
+            nextDelta = [scale * diffX, scale * diffY];
+            nextPos = [prevPos[0] + nextDelta[0], prevPos[1] + nextDelta[1]];
             nextVel = [scale * velX, scale * velY];
         }
 
-        this.output.emit('update', {p: nextPos, v: nextVel, slip: true});
+        var payload = this._payload;
+        payload.delta    = nextDelta;
+        payload.position = nextPos;
+        payload.velocity = nextVel;
+        payload.slip     = true;
+
+        this.output.emit('update', payload);
 
         this._prevTime = currTime;
         this._prevVel = nextVel;
     }
 
+    /**
+     * Return entire options dictionary, including defaults.
+     *
+     * @method getOptions
+     * @return {Object} configuration options
+     */
     ScrollSync.prototype.getOptions = function getOptions() {
         return this.options;
     };
 
+    /**
+     * Set internal options, overriding any default options
+     *
+     * @method setOptions
+     *
+     * @param {Object} [options] overrides of default options
+     * @param {Number} [options.minimimEndSpeed] If final velocity smaller than this, round down to 0.
+     * @param {Number} [options.stallTime] ms of non-motion before 'end' emitted
+     * @param {Number} [options.rails] whether to constrain to nearest axis.
+     * @param {Number} [options.direction] ScrollSync.DIRECTION_X, DIRECTION_Y -
+     *    pay attention to one specific direction.
+     * @param {Number} [options.scale] constant factor to scale velocity output
+     */
     ScrollSync.prototype.setOptions = function setOptions(options) {
         if (options.direction !== undefined) this.options.direction = options.direction;
         if (options.minimumEndSpeed !== undefined) this.options.minimumEndSpeed = options.minimumEndSpeed;
@@ -173,5 +202,4 @@ define(function(require, exports, module) {
     };
 
     module.exports = ScrollSync;
-
 });

@@ -24,14 +24,14 @@ define(function(require, exports, module) {
      *      Objects,
      *      Numbers,
      *      Nested Objects,
-     *      Nested Arrays
+     *      Nested Arrays.
      *
-     *  This excludes:
-     *      Document Fragments,
-     *      Functions
+     *    This excludes:
+     *        Document Fragments,
+     *        Functions
      * @class OptionsManager
      * @constructor
-     * @param {Object} value object containing key-value pairs of options
+     * @param {Object} value options dictionary
      */
     function OptionsManager(value) {
         this._value = value;
@@ -39,13 +39,13 @@ define(function(require, exports, module) {
     }
 
     /**
-     * Create options manager from source with arguments overriden by patch.
+     * Create options manager from source dictionary with arguments overriden by patch dictionary.
      *
      * @static
      * @method OptionsManager.patch
      *
      * @param {Object} source source arguments
-     * @param {Object} patch  argument additions and overwrites
+     * @param {...Object} data argument additions and overwrites
      * @return {Object} source object
      */
     OptionsManager.patch = function patchObject(source, data) {
@@ -61,11 +61,13 @@ define(function(require, exports, module) {
     }
 
     /**
-     * Create options manager from source with arguments overriden by patch.
+     * Create OptionsManager from source with arguments overriden by patches.
+     *   Triggers 'change' event on this object's event handler if the state of
+     *   the OptionsManager changes as a result.
      *
      * @method patch
      *
-     * @param {arguments-list} arguments list of patch objects
+     * @param {...Object} arguments list of patch objects
      * @return {OptionsManager} this
      */
     OptionsManager.prototype.patch = function patch() {
@@ -84,9 +86,8 @@ define(function(require, exports, module) {
         return this;
     };
 
-
     /**
-     * Alias for {@link patch}
+     * Alias for patch
      *
      * @method setOptions
      *
@@ -94,11 +95,11 @@ define(function(require, exports, module) {
     OptionsManager.prototype.setOptions = OptionsManager.prototype.patch;
 
     /**
-     * Return OptionsManager based on sub object retrieved by key
+     * Return OptionsManager based on sub-object retrieved by key
      *
      * @method key
      *
-     * @param {string} key key
+     * @param {string} identifier key
      * @return {OptionsManager} new options manager with the value
      */
     OptionsManager.prototype.key = function key(identifier) {
@@ -125,7 +126,7 @@ define(function(require, exports, module) {
     OptionsManager.prototype.getOptions = OptionsManager.prototype.get;
 
     /**
-     * Set key to value.  Outputs 'change' event.
+     * Set key to value.  Outputs 'change' event if a value is overwritten.
      *
      * @method set
      *
@@ -151,11 +152,14 @@ define(function(require, exports, module) {
         return this._value;
     };
 
-    /* These will be overridden once this.eventOutput is created */
-
     /**
-     * See {@link EventHandler.on}
-     * @method on&nbsp;
+     * Bind a callback function to an event type handled by this object.
+     *
+     * @method "on"
+     *
+     * @param {string} type event type key (for example, 'change')
+     * @param {function(string, Object)} handler callback
+     * @return {EventHandler} this
      */
     OptionsManager.prototype.on = function on() {
         _createEventOutput.call(this);
@@ -163,8 +167,14 @@ define(function(require, exports, module) {
     };
 
     /**
-     * See {@link EventHandler.removeListener}
+     * Unbind an event by type and handler.
+     *   This undoes the work of "on".
+     *
      * @method removeListener
+     *
+     * @param {string} type event type key (for example, 'change')
+     * @param {function} handler function object to remove
+     * @return {EventHandler} internal event handler object (for chaining)
      */
     OptionsManager.prototype.removeListener = function removeListener() {
         _createEventOutput.call(this);
@@ -172,8 +182,12 @@ define(function(require, exports, module) {
     };
 
     /**
-     * See {@link EventHandler.pipe}
+     * Add event handler object to set of downstream handlers.
+     *
      * @method pipe
+     *
+     * @param {EventHandler} target event handler target object
+     * @return {EventHandler} passed event handler
      */
     OptionsManager.prototype.pipe = function pipe() {
         _createEventOutput.call(this);
@@ -181,8 +195,13 @@ define(function(require, exports, module) {
     };
 
     /**
-     * See {@link EventHandler.unpipe}
+     * Remove handler object from set of downstream handlers.
+     * Undoes work of "pipe"
+     *
      * @method unpipe
+     *
+     * @param {EventHandler} target target handler object
+     * @return {EventHandler} provided target
      */
     OptionsManager.prototype.unpipe = function unpipe() {
         _createEventOutput.call(this);

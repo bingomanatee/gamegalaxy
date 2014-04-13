@@ -10,7 +10,6 @@
 define(function(require, exports, module) {
     var OptionsManager = require('famous/core/OptionsManager');
     var Transform = require('famous/core/Transform');
-    var Transitionable = require('famous/transitions/Transitionable');
     var ViewSequence = require('famous/core/ViewSequence');
     var Utility = require('famous/utilities/Utility');
 
@@ -19,11 +18,11 @@ define(function(require, exports, module) {
      * @class ScrollContainer
      * @constructor
      * @param {Options} [options] An object of configurable options.
-     * @param {Number} [direction=Utility.Direction.X] Using the direction helper found in the famous Utility
+     * @param {Number} [options.direction=Utility.Direction.Y] Using the direction helper found in the famous Utility
      * module, this option will lay out the SequentialLayout instance's renderables either horizontally
      * (x) or vertically (y). Utility's direction is essentially either zero (X) or one (Y), so feel free
      * to just use integers as well.
-     * @param {Array.Number} [defaultItemSize=[50, 50]] In the case where a renderable layed out
+     * @param {Array.Number} [options.defaultItemSize=[50, 50]] In the case where a renderable layed out
      * under SequentialLayout's control doesen't have a getSize method, SequentialLayout will assign it
      * this default size. (Commonly a case with Views).
      */
@@ -34,15 +33,16 @@ define(function(require, exports, module) {
 
         this.options = Object.create(this.constructor.DEFAULT_OPTIONS);
         this.optionsManager = new OptionsManager(this.options);
-        if(options) this.setOptions(options);
-    };
+
+        if (options) this.setOptions(options);
+    }
 
     SequentialLayout.DEFAULT_OPTIONS = {
-        direction: Utility.Direction.X,
+        direction: Utility.Direction.Y,
         defaultItemSize: [50, 50]
     };
 
-    SequentialLayout.DEFAULT_OUTPUT_FUNCTION = function(input, offset, index) {
+    SequentialLayout.DEFAULT_OUTPUT_FUNCTION = function DEFAULT_OUTPUT_FUNCTION(input, offset, index) {
         var transform = (this.options.direction === Utility.Direction.X) ? Transform.translate(offset, 0) : Transform.translate(0, offset);
         return {
             transform: transform,
@@ -56,8 +56,8 @@ define(function(require, exports, module) {
      * @method getSize
      * @return {Array} A two value array of the SequentialLayout instance's current width and height (in that order).
      */
-    SequentialLayout.prototype.getSize = function() {
-        if(!this._size) this.render(); // hack size in
+    SequentialLayout.prototype.getSize = function getSize() {
+        if (!this._size) this.render(); // hack size in
         return this._size;
     };
 
@@ -65,11 +65,11 @@ define(function(require, exports, module) {
      * Sets the collection of renderables under the SequentialLayout instance's control.
      *
      * @method sequenceFrom
-     * @param {Array|ViewSequence} sequence Either an array of renderables or a Famous viewSequence.
+     * @param {Array|ViewSequence} items Either an array of renderables or a Famous viewSequence.
      * @chainable
      */
-    SequentialLayout.prototype.sequenceFrom = function(items) {
-        if(items instanceof Array) items = new ViewSequence(items);
+    SequentialLayout.prototype.sequenceFrom = function sequenceFrom(items) {
+        if (items instanceof Array) items = new ViewSequence(items);
         this._items = items;
         return this;
     };
@@ -81,7 +81,7 @@ define(function(require, exports, module) {
      * @param {Options} options An object of configurable options for the SequentialLayout instance.
      * @chainable
      */
-    SequentialLayout.prototype.setOptions = function(options) {
+    SequentialLayout.prototype.setOptions = function setOptions(options) {
         this.optionsManager.setOptions.apply(this.optionsManager, arguments);
         return this;
     };
@@ -95,12 +95,19 @@ define(function(require, exports, module) {
      * instance.
      * @chainable
      */
-    SequentialLayout.prototype.setOutputFunction = function(outputFunction) {
+    SequentialLayout.prototype.setOutputFunction = function setOutputFunction(outputFunction) {
         this._outputFunction = outputFunction;
         return this;
     };
 
-    SequentialLayout.prototype.render = function() {
+    /**
+     * Generate a render spec from the contents of this component.
+     *
+     * @private
+     * @method render
+     * @return {number} Render spec for this component
+     */
+    SequentialLayout.prototype.render = function render() {
         var length = 0;
         var girth = 0;
 
@@ -109,24 +116,24 @@ define(function(require, exports, module) {
 
         var currentNode = this._items;
         var result = [];
-        while(currentNode) {
+        while (currentNode) {
             var item = currentNode.get();
 
             var itemSize;
-            if(item && item.getSize) itemSize = item.getSize();
-            if(!itemSize) itemSize = this.options.defaultItemSize;
-            if(itemSize[girthDim] !== true) girth = Math.max(girth, itemSize[girthDim]);
+            if (item && item.getSize) itemSize = item.getSize();
+            if (!itemSize) itemSize = this.options.defaultItemSize;
+            if (itemSize[girthDim] !== true) girth = Math.max(girth, itemSize[girthDim]);
 
             var output = this._outputFunction.call(this, item, length, result.length);
             result.push(output);
 
-            if(itemSize[lengthDim] && (itemSize[lengthDim] !== true)) length += itemSize[lengthDim];
+            if (itemSize[lengthDim] && (itemSize[lengthDim] !== true)) length += itemSize[lengthDim];
             currentNode = currentNode.getNext();
         }
 
-        if(!girth) girth = undefined;
+        if (!girth) girth = undefined;
 
-        if(!this._size) this._size = [0, 0];
+        if (!this._size) this._size = [0, 0];
         this._size[lengthDim] = length;
         this._size[girthDim] = girth;
 

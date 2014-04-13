@@ -41,11 +41,11 @@ define(function(require, exports, module) {
      *
      * @return {function} wrapped callback with coundown feature
      */
-    Utility.after = function(count, callback) {
+    Utility.after = function after(count, callback) {
         var counter = count;
         return function() {
             counter--;
-            if(counter === 0) callback.apply(this, arguments);
+            if (counter === 0) callback.apply(this, arguments);
         };
     };
 
@@ -57,11 +57,11 @@ define(function(require, exports, module) {
      * @param {string} url URL of object
      * @param {function} callback callback to dispatch with content
      */
-    Utility.loadURL = function(url, callback) {
+    Utility.loadURL = function loadURL(url, callback) {
         var xhr = new XMLHttpRequest();
-        xhr.onreadystatechange = function() {
-            if(this.readyState == 4) {
-                if(callback) callback(this.responseText);
+        xhr.onreadystatechange = function onreadystatechange() {
+            if (this.readyState === 4) {
+                if (callback) callback(this.responseText);
             }
         };
         xhr.open('GET', url);
@@ -77,11 +77,11 @@ define(function(require, exports, module) {
      *
      * @return {DocumentFragment} DocumentFragment representing input HTML
      */
-    Utility.createDocumentFragmentFromHTML = function(html) {
+    Utility.createDocumentFragmentFromHTML = function createDocumentFragmentFromHTML(html) {
         var element = document.createElement('div');
         element.innerHTML = html;
         var result = document.createDocumentFragment();
-        while(element.hasChildNodes()) result.appendChild(element.firstChild);
+        while (element.hasChildNodes()) result.appendChild(element.firstChild);
         return result;
     };
 

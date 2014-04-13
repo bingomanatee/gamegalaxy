@@ -17,6 +17,7 @@ define(function(require, exports, module) {
      *  on a 'on' and 'off' state
      *
      * @class TabBar
+     * @extends View
      * @constructor
      *
      * @param {object} options overrides of deault options
@@ -38,13 +39,13 @@ define(function(require, exports, module) {
 
         this.offSurface = new Surface();
         this.offSurface.on('click', function() {
-            if(this.options.toggleMode !== ToggleButton.OFF) this.select();
+            if (this.options.toggleMode !== ToggleButton.OFF) this.select();
         }.bind(this));
         this.offSurface.pipe(this._eventOutput);
 
         this.onSurface = new Surface();
         this.onSurface.on('click', function() {
-            if(this.options.toggleMode !== ToggleButton.ON) this.deselect();
+            if (this.options.toggleMode !== ToggleButton.ON) this.deselect();
         }.bind(this));
         this.onSurface.pipe(this._eventOutput);
 
@@ -54,8 +55,8 @@ define(function(require, exports, module) {
 
         this.deselect();
 
-        if(options) this.setOptions(options);
-    };
+        if (options) this.setOptions(options);
+    }
 
     ToggleButton.OFF = 0;
     ToggleButton.ON = 1;
@@ -67,7 +68,7 @@ define(function(require, exports, module) {
      *
      * @method select
      */
-    ToggleButton.prototype.select = function() {
+    ToggleButton.prototype.select = function select() {
         this.selected = true;
         this.arbiter.show(this.onSurface, this.options.inTransition);
 //        this.arbiter.setMode(ToggleButton.ON, this.options.inTransition);
@@ -80,12 +81,11 @@ define(function(require, exports, module) {
      *
      * @method deselect
      */
-    ToggleButton.prototype.deselect = function() {
+    ToggleButton.prototype.deselect = function deselect() {
         this.selected = false;
         this.arbiter.show(this.offSurface, this.options.outTransition);
         this._eventOutput.emit('deselect');
     };
-
 
     /**
      * Return the state of the button
@@ -94,7 +94,7 @@ define(function(require, exports, module) {
      *
      * @return {boolean} selected state
      */
-    ToggleButton.prototype.isSelected = function() {
+    ToggleButton.prototype.isSelected = function isSelected() {
         return this.selected;
     };
 
@@ -105,29 +105,29 @@ define(function(require, exports, module) {
      *
      * @param {object} options JSON
      */
-    ToggleButton.prototype.setOptions = function(options) {
-        if(options.content !== undefined) {
+    ToggleButton.prototype.setOptions = function setOptions(options) {
+        if (options.content !== undefined) {
             this.options.content = options.content;
             this.offSurface.setContent(this.options.content);
             this.onSurface.setContent(this.options.content);
         }
-        if(options.offClasses) {
+        if (options.offClasses) {
             this.options.offClasses = options.offClasses;
             this.offSurface.setClasses(this.options.offClasses);
         }
-        if(options.onClasses) {
+        if (options.onClasses) {
             this.options.onClasses = options.onClasses;
             this.onSurface.setClasses(this.options.onClasses);
         }
-        if(options.size !== undefined) {
+        if (options.size !== undefined) {
             this.options.size = options.size;
             this.onSurface.setSize(this.options.size);
             this.offSurface.setSize(this.options.size);
         }
-        if(options.toggleMode !== undefined) this.options.toggleMode = options.toggleMode;
-        if(options.outTransition !== undefined) this.options.outTransition = options.outTransition;
-        if(options.inTransition !== undefined) this.options.inTransition = options.inTransition;
-        if(options.crossfade !== undefined) {
+        if (options.toggleMode !== undefined) this.options.toggleMode = options.toggleMode;
+        if (options.outTransition !== undefined) this.options.outTransition = options.outTransition;
+        if (options.inTransition !== undefined) this.options.inTransition = options.inTransition;
+        if (options.crossfade !== undefined) {
             this.options.crossfade = options.crossfade;
             this.arbiter.setOptions({overlap: this.options.crossfade});
         }
@@ -140,18 +140,18 @@ define(function(require, exports, module) {
      *
      * @return {array} two element array [height, width]
      */
-    ToggleButton.prototype.getSize = function() {
+    ToggleButton.prototype.getSize = function getSize() {
         return this.options.size;
     };
 
     /**
-     * Return the render arbiters render spec
+     * Generate a render spec from the contents of this component.
      *
+     * @private
      * @method render
-     *
-     * @return {object} render spec of the arbiter
+     * @return {number} Render spec for this component
      */
-    ToggleButton.prototype.render = function() {
+    ToggleButton.prototype.render = function render() {
         return this.arbiter.render();
     };
 

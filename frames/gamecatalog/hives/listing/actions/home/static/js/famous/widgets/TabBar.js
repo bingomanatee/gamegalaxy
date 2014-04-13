@@ -18,6 +18,7 @@ define(function(require, exports, module) {
      *  based on the id of the button that was clicked
      *
      * @class TabBar
+     * @extends View
      * @constructor
      *
      * @param {object} options overrides of deault options
@@ -34,7 +35,8 @@ define(function(require, exports, module) {
         this._add(this.layout);
 
         this._optionsManager.on('change', _updateOptions.bind(this));
-    };
+    }
+
     TabBar.prototype = Object.create(View.prototype);
     TabBar.prototype.constructor = TabBar;
 
@@ -59,20 +61,20 @@ define(function(require, exports, module) {
         var id = data.id;
         var value = data.value;
 
-        if(id === 'direction') {
+        if (id === 'direction') {
             this.layout.setOptions({dimensions: _resolveGridDimensions.call(this.buttons.length, this.options.direction)});
         }
-        else if(id === 'buttons') {
-            for(var i in this.buttons) {
+        else if (id === 'buttons') {
+            for (var i in this.buttons) {
                 this.buttons[i].setOptions(value);
             }
         }
-        else if(id === 'sections') {
-            for(var id in this.options.sections) {
-                this.defineSection(id, this.options.sections[id]);
+        else if (id === 'sections') {
+            for (var sectionId in this.options.sections) {
+                this.defineSection(sectionId, this.options.sections[sectionId]);
             }
         }
-    };
+    }
 
     /**
      * Return an array of the proper dimensions for the tabs
@@ -85,9 +87,9 @@ define(function(require, exports, module) {
      * @return {array} the dimensions of the tab section
      */
     function _resolveGridDimensions(count, direction) {
-        if(direction === Utility.Direction.X) return [count, 1];
+        if (direction === Utility.Direction.X) return [count, 1];
         else return [1, count];
-    };
+    }
 
     /**
      * Create a new button with the specified id.  If one already exists with
@@ -98,11 +100,11 @@ define(function(require, exports, module) {
      * @param {string} id name of the button
      * @param {object} content data for the creation of a new ToggleButton
      */
-    TabBar.prototype.defineSection = function(id, content) {
+    TabBar.prototype.defineSection = function defineSection(id, content) {
         var button;
         var i = this._buttonIds[id];
 
-        if(i === undefined) {
+        if (i === undefined) {
             i = this.buttons.length;
             this._buttonIds[id] = i;
             var widget = this.options.widget;
@@ -115,7 +117,7 @@ define(function(require, exports, module) {
             button.unbind('select', this._buttonCallbacks[id]);
         }
 
-        if(this.options.buttons) button.setOptions(this.options.buttons);
+        if (this.options.buttons) button.setOptions(this.options.buttons);
         button.setOptions(content);
 
         this._buttonCallbacks[id] = this.select.bind(this, id);
@@ -130,18 +132,18 @@ define(function(require, exports, module) {
      *
      * @param {string} id button id
      */
-    TabBar.prototype.select = function(id) {
+    TabBar.prototype.select = function select(id) {
         var btn = this._buttonIds[id];
         // this prevents event loop
-        if(this.buttons[btn] && this.buttons[btn].isSelected()) {
+        if (this.buttons[btn] && this.buttons[btn].isSelected()) {
             this._eventOutput.emit('select', {id: id});
         }
-        else {
-            this.buttons[btn] && this.buttons[btn].select();
+        else if (this.buttons[btn]) {
+            this.buttons[btn].select();
         }
 
-        for(var i = 0; i < this.buttons.length; i++) {
-            if(i != btn) this.buttons[i].deselect();
+        for (var i = 0; i < this.buttons.length; i++) {
+            if (i !== btn) this.buttons[i].deselect();
         }
     };
 

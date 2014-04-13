@@ -11,7 +11,6 @@ define(function(require, exports, module) {
     var Scene = require('famous/core/Scene');
     var Surface = require('famous/core/Surface');
     var Transform = require('famous/core/Transform');
-    var Utility = require('famous/utilities/Utility');
     var View = require('famous/core/View');
 
     /**
@@ -20,6 +19,7 @@ define(function(require, exports, module) {
      *  further options
      *
      * @class NavigationBar
+     * @extends View
      * @constructor
      *
      * @param {object} [options] overrides of deault options
@@ -83,34 +83,34 @@ define(function(require, exports, module) {
         this.optionsManager.on('change', function(event) {
             var key = event.id;
             var data = event.value;
-            if(key === 'size') {
+            if (key === 'size') {
                 this.layout.id['master'].setSize(data);
                 this.title.setSize(data);
                 this.back.setSize([data[1], data[1]]);
                 this.more.setSize([data[1], data[1]]);
             }
-            else if(key === 'backClasses') {
+            else if (key === 'backClasses') {
                 this.back.setOptions({classes: this.options.classes.concat(this.options.backClasses)});
             }
-            else if(key === 'backContent') {
+            else if (key === 'backContent') {
                 this.back.setContent(this.options.backContent);
             }
-            else if(key === 'classes') {
+            else if (key === 'classes') {
                 this.title.setOptions({classes: this.options.classes});
                 this.back.setOptions({classes: this.options.classes.concat(this.options.backClasses)});
                 this.more.setOptions({classes: this.options.classes.concat(this.options.moreClasses)});
             }
-            else if(key === 'content') {
+            else if (key === 'content') {
                 this.setContent(this.options.content);
             }
-            else if(key === 'moreClasses') {
+            else if (key === 'moreClasses') {
                 this.more.setOptions({classes: this.options.classes.concat(this.options.moreClasses)});
             }
-            else if(key === 'moreContent') {
+            else if (key === 'moreContent') {
                 this.more.setContent(this.options.content);
             }
         }.bind(this));
-    };
+    }
 
     NavigationBar.prototype = Object.create(View.prototype);
     NavigationBar.prototype.constructor = NavigationBar;
@@ -134,7 +134,7 @@ define(function(require, exports, module) {
      *
      * @return {undefined}
      */
-    NavigationBar.prototype.setContent = function(content) {
+    NavigationBar.prototype.setContent = function setContent(content) {
         return this.title.setContent(content);
     };
 

@@ -13,14 +13,14 @@ define(function(require, exports, module) {
 
     /**
      *  A constraint that keeps a physics body on a given implicit surface
-     *  regardless of other physical forces are applied to it.
+     *    regardless of other physical forces are applied to it.
      *
      *  @class Surface
      *  @constructor
      *  @extends Constraint
      *  @param options {Object}
      */
-    function Surface(options){
+    function Surface(options) {
         this.options = Object.create(Surface.DEFAULT_OPTIONS);
         if (options) this.setOptions(options);
 
@@ -28,7 +28,7 @@ define(function(require, exports, module) {
         this.impulse  = new Vector();
 
         Constraint.call(this);
-    };
+    }
 
     Surface.prototype = Object.create(Constraint.prototype);
     Surface.prototype.constructor = Surface;
@@ -43,7 +43,7 @@ define(function(require, exports, module) {
 
         /**
          * An implicitly defined surface f(x,y,z) = 0 that body is constrained to
-         *   e.g. function(x,y,z){ x*x + y*y + z*z - r*r }
+         *   e.g. function(x,y,z) { x*x + y*y + z*z - r*r }
          *   corresponds to a sphere of radius r pixels
          *
          * @attribute equation
@@ -77,7 +77,7 @@ define(function(require, exports, module) {
      * @method setOptions
      * @param options {Objects}
      */
-    Surface.prototype.setOptions = function(options){
+    Surface.prototype.setOptions = function setOptions(options) {
         for (var key in options) this.options[key] = options[key];
     };
 
@@ -89,7 +89,7 @@ define(function(require, exports, module) {
      * @param source {Body} Not applicable
      * @param dt {Number} Delta time
      */
-    Surface.prototype.applyConstraint = function(targets, source, dt){
+    Surface.prototype.applyConstraint = function applyConstraint(targets, source, dt) {
         var impulse = this.impulse;
         var J       = this.J;
         var options = this.options;
@@ -98,18 +98,18 @@ define(function(require, exports, module) {
         var dampingRatio = options.dampingRatio;
         var period = options.period;
 
-        for (var i = 0; i < targets.length; i++){
+        for (var i = 0; i < targets.length; i++) {
             var particle = targets[i];
 
             var v = particle.velocity;
             var p = particle.position;
             var m = particle.mass;
 
-            if (period === 0){
+            if (period === 0) {
                 var gamma = 0;
                 var beta = 1;
             }
-            else{
+            else {
                 var c = 4 * m * pi * dampingRatio / period;
                 var k = 4 * m * pi * pi / (period * period);
 
@@ -117,7 +117,9 @@ define(function(require, exports, module) {
                 var beta  = dt*k / (c + dt*k);
             }
 
-            var x = p.x, y = p.y, z = p.z;
+            var x = p.x;
+            var y = p.y;
+            var z = p.z;
 
             var f0  = f(x, y, z);
             var dfx = (f(x + epsilon, p, p) - f0) / epsilon;

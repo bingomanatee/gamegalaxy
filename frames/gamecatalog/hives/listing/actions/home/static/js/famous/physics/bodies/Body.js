@@ -15,17 +15,16 @@ define(function(require, exports, module) {
     var Matrix = require('famous/math/Matrix');
 
     /**
-     * A unit controlled by the physics engine which serves to provide position and orientation.
-     *    Body extends {@link Particle}. A Body is a Particle that has rotation as well as position.
-     *    Thus just like how Particle has velocity, momentum, etc,
-     *    Body adds angular velocity, angular momentum, etc.
+     * A unit controlled by the physics engine which extends the zero-dimensional
+     * Particle to include geometry. In addition to maintaining the state
+     * of a Particle its state includes orientation, angular velocity
+     * and angular momentum and responds to torque forces.
      *
      * @class Body
      * @extends Particle
      * @constructor
-     * @example TODO
      */
-    function Body(options){
+    function Body(options) {
         Particle.call(this, options);
         options = options || {};
 
@@ -45,7 +44,7 @@ define(function(require, exports, module) {
 
         //registers
         this.pWorld = new Vector();        //placeholder for world space position
-    };
+    }
 
     Body.DEFAULT_OPTIONS = Particle.DEFAULT_OPTIONS;
     Body.DEFAULT_OPTIONS.orientation = [0,0,0,1];
@@ -60,99 +59,168 @@ define(function(require, exports, module) {
 
     Body.prototype.isBody = true;
 
-    Body.prototype.setMass = function(){
+    Body.prototype.setMass = function setMass() {
         Particle.prototype.setMass.apply(this, arguments);
         this.setMomentsOfInertia();
     };
 
-    Body.prototype.setMomentsOfInertia = function(){
+    /**
+     * Setter for moment of inertia, which is necessary to give proper
+     * angular inertia depending on the geometry of the body.
+     *
+     * @method setMomentsOfInertia
+     */
+    Body.prototype.setMomentsOfInertia = function setMomentsOfInertia() {
         this.inertia = new Matrix();
         this.inverseInertia = new Matrix();
-        this.inverseInertiaTranspose = new Matrix();
     };
 
-    Body.prototype.updateAngularVelocity = function(){
+    /**
+     * Update the angular velocity from the angular momentum state.
+     *
+     * @method updateAngularVelocity
+     */
+    Body.prototype.updateAngularVelocity = function updateAngularVelocity() {
         this.angularVelocity.set(this.inverseInertia.vectorMultiply(this.angularMomentum));
     };
 
-    Body.prototype.toWorldCoordinates = function(localPosition){
+    /**
+     * Determine world coordinates from the local coordinate system. Useful
+     * if the Body has rotated in space.
+     *
+     * @method toWorldCoordinates
+     * @param localPosition {Vector} local coordinate vector
+     * @return global coordinate vector {Vector}
+     */
+    Body.prototype.toWorldCoordinates = function toWorldCoordinates(localPosition) {
         return this.pWorld.set(this.orientation.rotateVector(localPosition));
     };
 
-    Body.prototype.getEnergy = function(){
+    /**
+     * Calculates the kinetic and intertial energy of a body.
+     *
+     * @return energy {Number}
+     */
+    Body.prototype.getEnergy = function getEnergy() {
         return Particle.prototype.getEnergy.call(this)
             + 0.5 * this.inertia.vectorMultiply(this.angularVelocity).dot(this.angularVelocity);
     };
 
-    Body.prototype.reset = function(p, v, q, L){
+    /**
+     * Extends Particle.reset to reset orientation, angular velocity
+     * and angular momentum.
+     *
+     * @param [p] {Array|Vector} position
+     * @param [v] {Array|Vector} velocity
+     * @param [q] {Array|Quaternion} orientation
+     * @param [L] {Array|Vector} angular momentum
+     */
+    Body.prototype.reset = function reset(p, v, q, L) {
         Particle.prototype.reset.call(this, p, v);
         this.angularVelocity.clear();
         this.setOrientation(q || [1,0,0,0]);
         this.setAngularMomentum(L || [0,0,0]);
     };
 
-    Body.prototype.setOrientation = function(q){
+    /**
+     * Setter for orientation
+     *
+     * @param q {Array|Quaternion} orientation
+     */
+    Body.prototype.setOrientation = function setOrientation(q) {
         this.orientation.set(q);
     };
 
-    Body.prototype.setAngularVelocity = function(w){
+    /**
+     * Setter for angular velocity
+     *
+     * @param w {Array|Vector} angular velocity
+     */
+    Body.prototype.setAngularVelocity = function setAngularVelocity(w) {
         this.wake();
         this.angularVelocity.set(w);
     };
 
-    Body.prototype.setAngularMomentum = function(L){
+    /**
+     * Setter for angular momentum
+     *
+     * @param L {Array|Vector} angular momentum
+     */
+    Body.prototype.setAngularMomentum = function setAngularMomentum(L) {
         this.wake();
         this.angularMomentum.set(L);
     };
 
-    Body.prototype.applyForce = function(force, location){
+    /**
+     * Extends Particle.applyForce with an optional argument
+     * to apply the force at an off-centered location, resulting in a torque.
+     *
+     * @method applyForce
+     * @param force {Vector} force
+     * @param [location] {Vector} off-center location on the body
+     */
+    Body.prototype.applyForce = function applyForce(force, location) {
         Particle.prototype.applyForce.call(this, force);
         if (location !== undefined) this.applyTorque(location.cross(force));
     };
 
-    Body.prototype.applyTorque = function(torque){
+    /**
+     * Applied a torque force to a body, inducing a rotation.
+     *
+     * @method applyTorque
+     * @param torque {Vector} torque
+     */
+    Body.prototype.applyTorque = function applyTorque(torque) {
         this.wake();
         this.torque.set(this.torque.add(torque));
     };
 
-    Body.prototype.applyTorqueImpulse = function(torqueImpulse){
-        var R    = this.orientation.getMatrix();
-        var Iinv = this.inverseInertia;
-        var M = [];
-
-        for (var i = 0; i < 3; i++){
-            M[i] = [];
-            for (var j = 0; j < 3; j++){
-                var sum = 0;
-                for (var k = 0; k < 3; k++){
-                    sum += R[i][k] * Iinv[k][k] * R[j][k];
-                };
-                M[i][j] = sum;
-            };
-        };
-        this.inverseInertiaTranspose.set(M);
-        this.setAngularVelocity(this.angularVelocity.add(M.vectorMultiply(torqueImpulse)));
-    };
-
-    Body.prototype.getTransform = function(){
-        return Transform.move(
+    /**
+     * Extends Particle.getTransform to include a rotational component
+     * derived from the particle's orientation.
+     *
+     * @method getTransform
+     * @return transform {Transform}
+     */
+    Body.prototype.getTransform = function getTransform() {
+        return Transform.thenMove(
             this.orientation.getTransform(),
             Transform.getTranslate(Particle.prototype.getTransform.call(this))
         );
     };
 
-    Body.prototype._integrate = function(dt){
+    /**
+     * Extends Particle._integrate to also update the rotational states
+     * of the body.
+     *
+     * @method getTransform
+     * @protected
+     * @param dt {Number} delta time
+     */
+    Body.prototype._integrate = function _integrate(dt) {
         Particle.prototype._integrate.call(this, dt);
         this.integrateAngularMomentum(dt);
         this.updateAngularVelocity(dt);
         this.integrateOrientation(dt);
     };
 
-    Body.prototype.integrateAngularMomentum = function(dt){
+    /**
+     * Updates the angular momentum via the its integrator.
+     *
+     * @method integrateAngularMomentum
+     * @param dt {Number} delta time
+     */
+    Body.prototype.integrateAngularMomentum = function integrateAngularMomentum(dt) {
         Body.INTEGRATOR.integrateAngularMomentum(this, dt);
     };
 
-    Body.prototype.integrateOrientation = function(dt){
+    /**
+     * Updates the orientation via the its integrator.
+     *
+     * @method integrateOrientation
+     * @param dt {Number} delta time
+     */
+    Body.prototype.integrateOrientation = function integrateOrientation(dt) {
         Body.INTEGRATOR.integrateOrientation(this, dt);
     };
 

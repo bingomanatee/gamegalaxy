@@ -13,17 +13,17 @@ define(function(require, exports, module) {
 
     /**
      *  A spring constraint is like a spring force, except that it is always
-     *  numerically stable (even for low periods), at the expense of introducing
-     *  damping (even with dampingRatio set to 0).
+     *    numerically stable (even for low periods), at the expense of introducing
+     *    damping (even with dampingRatio set to 0).
      *
-     *      Use this if you need fast spring-like behavior, e.g., snapping
+     *    Use this if you need fast spring-like behavior, e.g., snapping
      *
-     *  @class Rod
+     *  @class Snap
      *  @constructor
      *  @extends Constraint
      *  @param options {Object}
      */
-    function StiffSpring(options){
+    function Snap(options) {
         this.options = Object.create(this.constructor.DEFAULT_OPTIONS);
         if (options) this.setOptions(options);
 
@@ -34,18 +34,18 @@ define(function(require, exports, module) {
         this.impulse2 = new Vector();
 
         Constraint.call(this);
-    };
+    }
 
-    StiffSpring.prototype = Object.create(Constraint.prototype);
-    StiffSpring.prototype.constructor = StiffSpring;
+    Snap.prototype = Object.create(Constraint.prototype);
+    Snap.prototype.constructor = Snap;
 
     /**
-     * @property StiffSpring.DEFAULT_OPTIONS
+     * @property Snap.DEFAULT_OPTIONS
      * @type Object
      * @protected
      * @static
      */
-    StiffSpring.DEFAULT_OPTIONS = {
+    Snap.DEFAULT_OPTIONS = {
 
         /**
          * The amount of time in milliseconds taken for one complete oscillation
@@ -90,18 +90,18 @@ define(function(require, exports, module) {
 
     /** const */ var pi = Math.PI;
 
-    function _calcEnergy(impulse, disp, dt){
+    function _calcEnergy(impulse, disp, dt) {
         return Math.abs(impulse.dot(disp)/dt);
-    };
+    }
 
     /**
      * Basic options setter
      *
      * @method setOptions
-     * @param options {Objects}
+     * @param options {Objects} options
      */
-    StiffSpring.prototype.setOptions = function(options){
-        if (options.anchor !== undefined){
+    Snap.prototype.setOptions = function setOptions(options) {
+        if (options.anchor !== undefined) {
             if (options.anchor   instanceof Vector) this.options.anchor = options.anchor;
             if (options.anchor.position instanceof Vector) this.options.anchor = options.anchor.position;
             if (options.anchor   instanceof Array)  this.options.anchor = new Vector(options.anchor);
@@ -115,9 +115,10 @@ define(function(require, exports, module) {
      * Set the anchor position
      *
      * @method setOptions
-     * @param anchor {Array}
+     * @param {Array} v TODO
      */
-    StiffSpring.prototype.setAnchor = function(v){
+
+    Snap.prototype.setAnchor = function setAnchor(v) {
         if (this.options.anchor !== undefined) this.options.anchor = new Vector();
         this.options.anchor.set(v);
     };
@@ -126,13 +127,15 @@ define(function(require, exports, module) {
      * Calculates energy of spring
      *
      * @method getEnergy
+     * @param {Object} target TODO
+     * @param {Object} source TODO
      * @return energy {Number}
      */
-    StiffSpring.prototype.getEnergy = function(target, source){
+    Snap.prototype.getEnergy = function getEnergy(target, source) {
         var options     = this.options;
-        var restLength  = options.length,
-            anchor      = options.anchor || source.position,
-            strength    = Math.pow(2 * pi / options.period, 2);
+        var restLength  = options.length;
+        var anchor      = options.anchor || source.position;
+        var strength    = Math.pow(2 * pi / options.period, 2);
 
         var dist = anchor.sub(target.position).norm() - restLength;
 
@@ -147,8 +150,7 @@ define(function(require, exports, module) {
      * @param source {Body}         The source of the constraint
      * @param dt {Number}           Delta time
      */
-    StiffSpring.prototype.applyConstraint = function(targets, source, dt){
-
+    Snap.prototype.applyConstraint = function applyConstraint(targets, source, dt) {
         var options         = this.options;
         var pDiff        = this.pDiff;
         var vDiff        = this.vDiff;
@@ -159,7 +161,7 @@ define(function(require, exports, module) {
         var period       = options.period;
         var dampingRatio = options.dampingRatio;
 
-        for (var i = 0; i < targets.length ; i++){
+        for (var i = 0; i < targets.length ; i++) {
             var target = targets[i];
 
             var p1 = target.position;
@@ -170,28 +172,28 @@ define(function(require, exports, module) {
             pDiff.set(p1.sub(anchor));
             var dist = pDiff.norm() - length;
 
-            if (source){
+            if (source) {
                 var w2 = source.inverseMass;
                 var v2 = source.velocity;
                 vDiff.set(v1.sub(v2));
                 var effMass = 1/(w1 + w2);
             }
-            else{
+            else {
                 vDiff.set(v1);
                 var effMass = m1;
             }
 
-            if (this.options.period == 0){
+            if (this.options.period === 0) {
                 var gamma = 0;
                 var beta = 1;
             }
-            else{
+            else {
                 var k = 4 * effMass * pi * pi / (period * period);
                 var c = 4 * effMass * pi * dampingRatio / period;
 
                 var beta  = dt * k / (c + dt * k);
                 var gamma = 1 / (c + dt*k);
-            };
+            }
 
             var antiDrift = beta/dt * dist;
             pDiff.normalize(-antiDrift)
@@ -206,7 +208,7 @@ define(function(require, exports, module) {
 
             target.applyImpulse(impulse1);
 
-            if (source){
+            if (source) {
                 impulse1.mult(-1).put(impulse2);
                 source.applyImpulse(impulse2);
             }
@@ -215,5 +217,5 @@ define(function(require, exports, module) {
         }
     };
 
-    module.exports = StiffSpring;
+    module.exports = Snap;
 });

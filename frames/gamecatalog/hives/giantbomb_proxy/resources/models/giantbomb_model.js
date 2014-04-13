@@ -39,7 +39,7 @@ module.exports = function (apiary, callback) {
 
             requestor.get(url, {qs: params}, function (err, res, body) {
                 if (err) {
-                    callback(rr);
+                    callback(err);
                 } else {
                     var data;
                     try {

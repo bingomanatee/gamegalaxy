@@ -1,7 +1,8 @@
 {
     "static": {
         "js": "/js/home",
-        "css": "/css/home"
+        "css": "/css/home",
+        "img": "/img/home"
     },
     "javascript": [
         {
