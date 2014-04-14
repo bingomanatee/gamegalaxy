@@ -10,7 +10,7 @@ var express = require('express')
     , mvc = require('hive-mvc');
 
 var app = express();
-var PORT = process.env.PORT || 8080;
+var PORT = process.env.PORT || 80;
 
 app.configure(function () {
     app.set('port', PORT);
@@ -38,7 +38,7 @@ server.on('close', function () {
 var log_file = path.resolve(__dirname, 'actions.log');
 
 var frame_path = path.resolve(__dirname, 'frames');
-console.log('loading %s', frame_path);
+
 server.listen(app.get('port'), function () {
     var apiary = mvc.Apiary({log_file: log_file, action_handler_failsafe_time: 3000}, frame_path);
     apiary.set_config('god_mode', true);
