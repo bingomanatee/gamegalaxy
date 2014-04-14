@@ -11,7 +11,7 @@ define(function (require, exports, module) {
     var HeaderFooterLayout = require("famous/views/HeaderFooterLayout");
     var Transform = require('famous/core/Transform');
     var Modifier = require('famous/core/Modifier');
-    var ContainerSurface = require('famous/Surfaces/ContainerSurface');
+    var ContainerSurface = require('famous/surfaces/ContainerSurface');
     var Scrollview = require('famous/views/Scrollview');
     var GridLayout = require('famous/views/GridLayout');
     var ImageSurface = require('famous/surfaces/ImageSurface');

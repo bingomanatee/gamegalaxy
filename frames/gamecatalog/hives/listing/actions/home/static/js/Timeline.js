@@ -14,7 +14,7 @@ define(function (require, exports, module) {
     var giantbomb = require('giantbomb');
     var Modifier = require('famous/core/Modifier');
     var StateModifier = require('famous/modifiers/StateModifier');
-    var ContainerSurface = require('famous/Surfaces/ContainerSurface');
+    var ContainerSurface = require('famous/surfaces/ContainerSurface');
     var View = require('famous/core/View');
     var Scrollview = require('famous/views/Scrollview');
     var GridLayout = require('famous/views/GridLayout');
