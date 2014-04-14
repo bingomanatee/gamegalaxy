@@ -18,7 +18,15 @@ define(function (require, exports, module) {
     var Transitionable = require("famous/transitions/Transitionable");
     var TransitionableTransform = require("famous/transitions/TransitionableTransform");
     var Easing = require('famous/transitions/Easing');
-    var Lightbox = require('famous/views/Lightbox');
+    var RenderController = require('famous/views/RenderController');
+    var View = require('famous/core/View');
+
+    var LIST = 0;
+    var TIMELINE = 1;
+
+    var LOAD_NO_GAMES = 0;
+    var LOAD_LOADING = 1;
+    var LOAD_DONE_LOADING = 2;
 
     /// local classes, utilities
     var Timeline = require('Timeline');
@@ -26,39 +34,7 @@ define(function (require, exports, module) {
     var giantbomb = require('giantbomb');
     var Platform = require('Platform');
 
-    // a sloppy hack for sharing the config
-
-    // sizing context
-    var ENTRY_MARGIN = config.ENTRY_MARGIN;
-    var ENTRY_LABEL_SIZE = config.ENTRY_LABEL_SIZE;
-    var ENTRY_ROW_HEIGHT = config.ENTRY_ROW_HEIGHT;
-    var ENTRY_HEIGHT = config.ENTRY_HEIGHT;
-    var HEADER_HEIGHT = config.HEADER_HEIGHT;
-    var FOOTER_HEIGHT = config.FOOTER_HEIGHT;
-    var SEARCH_LABEL_SIZE = config.SEARCH_LABEL_SIZE;
-    var SEARCH_INPUT_SIZE = config.SEARCH_INPUT_SIZE;
-
-    // game row item sizes
-    var GAME_ROW_ITEM_HEIGHT = config.GAME_ROW_ITEM_HEIGHT;
-    var GAME_ROW_ITEM_PLATFORM_WIDTH = config.GAME_ROW_ITEM_PLATFORM_WIDTH;
-    var GAME_ROW_NAME_WIDTH = config.GAME_ROW_NAME_WIDTH;
-    var GAME_ROW_ITEM_DATE_WIDTH = config.GAME_ROW_ITEM_DATE_WIDTH;
-    var GAME_HEADER_HEIGHT = config.GAME_HEADER_HEIGHT;
-    var GAME_HEADER_LABEL_HEIGHT = config.GAME_HEADER_LABEL_HEIGHT;
-    var ICON_WIDTH = config.ICON_WIDTH;
-    var ICON_MARGIN = config.ICON_MARGIN;
-    var CALLOUT_Z = config.CALLOUT_Z;
-
     // platform
-    var PLATFORM_COLUMNS = config.PLATFORM_COLUMNS;
-    var PLATFORM_HEIGHT = config.PLATFORM_HEIGHT;
-    var PLATFORM_EXTRA = config.PLATFORM_EXTRA;
-    var ENTRY_SEARCH_BUTTON_WIDTH = config.ENTRY_SEARCH_BUTTON_WIDTH;
-    var PLATFORM_HEADER_HEIGHT = config.PLATFORM_HEADER_HEIGHT;
-    var PLATFORM_DIALOG_WIDTH = config.PLATFORM_DIALOG_WIDTH;
-    var PLATFORM_MARGIN = config.PLATFORM_MARGIN;
-    var CALLOUT_RATIO = config.CALLOUT_RATIO;
-    var PLATFORM_INNER_WIDTH = config.PLATFORM_INNER_WIDTH;
     var platformDialogContainer;
     var platformGridContainer;
     var platformParent;
@@ -68,7 +44,6 @@ define(function (require, exports, module) {
     var inputSurface;
 
     // templates
-    var _platformContent = _.template('<h3><%= abbreviation %></h3><p><%= name %></p>');
     var _filterText = _.template('platform: <i><% if (platform){ %><%= platform.name %><span id="clear-platform">&times;</span><% } else { %>ALL<% } %></i>');
     var _statusTemplate = _.template('<%= found %> of <%= results %> retrieved <% if (active != found ){ %>(<%= active %> filtered records shown)<% } %>');
     var _gameHeader = _.template('<h1><%= name %></h1><h2><%= original_release_date ? new Date(original_release_date).getFullYear()  : "?" %></h2>'// +
@@ -85,7 +60,10 @@ define(function (require, exports, module) {
     var gameListScrollView;
     var platformLabelContainer;
     var releasedLabel;
+
+    // callout
     var gameCallout;
+    var gameCalloutModifier;
     var gameCalloutTitle;
     var gameCalloutPlatforms;
     var gameCalloutImage;
@@ -107,6 +85,10 @@ define(function (require, exports, module) {
     var foundGames = [];
     var searchText = '';
     var firstLoad = true;
+    var viewPanel = LIST;
+    var promptUp = true;
+    var loadState = LOAD_NO_GAMES;
+
 
     //main elements
     var mainContext = config.context;
@@ -117,24 +99,138 @@ define(function (require, exports, module) {
     var sceneBox;
     var initPromptMod;
 
+    var timelineButton, listButton;
+
     mainContext.setPerspective(800);
     var platform = null;
 
-    function showPlatformDialog() {
-        var tiles = gamePlatformTiles();
-        if (tiles && tiles.length) {
 
-            var rows = Math.ceil(tiles.length / PLATFORM_COLUMNS);
-            var total_row_height = (rows * PLATFORM_HEIGHT);
-            var innerWidth = PLATFORM_DIALOG_WIDTH - (2 * PLATFORM_MARGIN);
+    function viewList(){
+        if (viewPanel == LIST){
+            return;
+        }
+
+        viewPanel = LIST;
+
+        gameCalloutModifier.setOpacity(1, {duration: 400, easing: _.identity},
+            function(){
+                sceneBox.show(mainContentNode, {duration: 50, easing: function () {
+                    return 1
+                }});
+            });
+
+        listButton.setProperties({opacity: 0.25});
+        timelineButton.setProperties({opacity: 1})
+    }
+
+    function viewTimeline() {
+        if (viewPanel == TIMELINE || (loadState != LOAD_DONE_LOADING)){
+            return;
+        }
+        viewPanel = TIMELINE;
+        var timeline = new Timeline(searchText, foundGames);
+
+
+        gameCalloutModifier.setOpacity(0, {duration: 400, easing: _.identity},
+            function(){
+                sceneBox.show(timeline, {duration: 50, easing: function () {
+                    return 1
+                }});
+            });
+
+        listButton.setProperties({opacity: 1});
+        timelineButton.setProperties({opacity: 0.25})
+    }
+
+    function addTimelineButton(){
+        var timelineImage = new ImageSurface({
+            size: [200, 100]
+        });
+
+        timelineImage.setContent('/img/home/timeline_icon.png');
+
+        timelineButton = new ContainerSurface({
+            size: [200, 100],
+            classes: ['view-switch-button', 'timeline-button']
+        });
+
+        timelineButton.add(timelineImage);
+
+        var title = new Surface({
+            content: 'Timeline View'
+
+        });
+        title.elementType = 'h2';
+
+        timelineButton.add(new Modifier({
+            origin: [0.5, 0.5],
+            size: [200, 20]
+        })).add(title);
+
+        layout.header.add(new Modifier({
+            origin: [1, 0]
+        })).add(timelineButton);
+
+        timelineButton.on('click', viewTimeline);
+    }
+
+    function addListButton(){
+        var listImage = new ImageSurface({
+            size: [200, 100]
+        });
+
+        listImage.setContent('/img/home/list_icon.png');
+
+        listButton = new ContainerSurface({
+            size: [200, 100],
+            classes: ['view-switch-button']
+        });
+
+        listButton.add(listImage);
+
+        var title = new Surface({
+            content: 'List View'
+
+        });
+        title.elementType = 'h2';
+
+        listButton.add(new Modifier({
+            origin: [0.5, 0.5],
+            size: [200, 20]
+        })).add(title);
+
+        layout.header.add(new Modifier({
+            origin: [0, 0]
+        })).add(listButton);
+
+
+        listButton.on('click', viewList);
+
+        listButton.setProperties({opacity: 0.25})
+    }
+
+    function showPlatformDialog() {
+        var tiles = Platform.gamePlatformTiles(foundGames);
+
+        if (tiles && tiles.length) {
+            _.each(tiles, function(tile){
+                tile.on('click', function () {
+                    setSearchPlatform(tile.platform);
+                    platformDialogContainer.setProperties({display: 'none'});
+                });
+            });
+
+            var rows = Math.ceil(tiles.length / config.PLATFORM_COLUMNS);
+            var total_row_height = (rows * config.PLATFORM_HEIGHT);
+            var innerWidth = config.PLATFORM_DIALOG_WIDTH - (2 * config.PLATFORM_MARGIN);
 
             platformDialogContainer = new ContainerSurface({
-                size: [PLATFORM_DIALOG_WIDTH, total_row_height + PLATFORM_EXTRA + (2 * PLATFORM_MARGIN)],
+                size: [config.PLATFORM_DIALOG_WIDTH, total_row_height + config.PLATFORM_EXTRA + (2 * config.PLATFORM_MARGIN)],
                 classes: ['dialog-frame', 'platform-dialog']
             });
 
             var innerDialogContent = new ContainerSurface({
-                size: [PLATFORM_INNER_WIDTH, PLATFORM_EXTRA + total_row_height],
+                size: [config.PLATFORM_INNER_WIDTH, config.PLATFORM_EXTRA + total_row_height],
                 classes: ['platform-inner-dialog']
             });
             innerDialogContent.add(new Surface({
@@ -143,7 +239,7 @@ define(function (require, exports, module) {
             }));
 
             platformDialogContainer.add(new Modifier({
-                transform: Transform.translate(PLATFORM_MARGIN, PLATFORM_MARGIN, 0),
+                transform: Transform.translate(config.PLATFORM_MARGIN, config.PLATFORM_MARGIN, 0),
                 origin: [0, 0]
             }))
                 .add(innerDialogContent);
@@ -158,23 +254,23 @@ define(function (require, exports, module) {
             platformParent.add(platformDialogContainer);
 
             platformGridContainer = new GridLayout({
-                dimensions: [PLATFORM_COLUMNS, rows],
-                cellSize: [innerWidth / PLATFORM_COLUMNS, 80]
+                dimensions: [config.PLATFORM_COLUMNS, rows],
+                cellSize: [innerWidth / config.PLATFORM_COLUMNS, 80]
             });
             platformGridContainer.sequenceFrom(tiles);
 
             innerDialogContent.add(new Modifier({
-                transform: Transform.translate(0, PLATFORM_EXTRA),
+                transform: Transform.translate(0, config.PLATFORM_EXTRA),
                 origin: [0, 0],
-                size: [innerWidth, rows * PLATFORM_HEIGHT]
+                size: [innerWidth, rows * config.PLATFORM_HEIGHT]
             })).add(platformGridContainer);
         }
     }
 
     function platformNames(game) {
-        return _.map(game.platforms, function (p) {
+        return _.sortBy(_.map(game.platforms, function (p) {
             return platform && (p.abbreviation == platform.abbreviation) ? '<b>' + p.abbreviation + '</b>' : p.abbreviation
-        }).join(', ');
+        }), _.identity).join(', ');
     }
 
     function hoverClasses(target, ifOverClasses, ifOutClasses, key) {
@@ -221,9 +317,10 @@ define(function (require, exports, module) {
     }
 
     function updateGameList(text) {
-        if (initPromptMod._output.opacity){
+        if (promptUp) {
             initPromptMod.halt();
             initPromptMod.setOpacity(0, {duration: 2000, easing: Easing.outExpo});
+            promptUp = false;
         }
         searchChangeDelay = null;
         platform = null;
@@ -232,6 +329,7 @@ define(function (require, exports, module) {
         foundGames = [];
         var thisSearch = ++searchEdition;
 
+        loadState = LOAD_LOADING;
         giantbomb.games({filter: 'name:' + encodeURIComponent(text)}, function (data) {
             mainSurface.setContent('');
             mainContext.emit('game filter update');
@@ -248,43 +346,39 @@ define(function (require, exports, module) {
 
             function _expandList(data) {
                 if (!(thisSearch == searchEdition)) {
-                    console.log('aborting old poll');
                     return;
                 }
                 if (!_lastSet(data)) {
                     var offset = data.offset + 100;
-                    console.log('getting ' + text + ' from ', offset);
                     giantbomb.games({filter: 'name:' + encodeURIComponent(text), offset: offset},
                         function (addedData) {
+                            loadState = LOAD_LOADING;
                             if (!(thisSearch == searchEdition)) {
-                                console.log('rest -- aborting old poll');
                                 return;
                             }
                             if (!addedData.results) {
-                                console.log('bad data');
+                                loadState = LOAD_DONE_LOADING;
                                 return;
                             }
                             foundGames = foundGames.concat(addedData.results);
                             renderGames(addedData);
-                            console.log('loaded records from ', offset);
 
                             if ((thisSearch == searchEdition) && !_lastSet(addedData)) {
-                                console.log('getting ' + text + ' from ', addedData.offset);
                                 _expandList(addedData);
                             } else {
-                                console.log('end of pull for ', text);
+                                loadState = LOAD_DONE_LOADING;
                             }
                         });
 
                 } else {
-                    console.log('end of pull for ', text);
+                    loadState = LOAD_DONE_LOADING;
                 }
             }
 
             _expandList(data);
 
             lhnModifier.setTransform(
-                Transform.translate(0, ENTRY_HEIGHT),
+                Transform.translate(0, config.ENTRY_HEIGHT),
                 { curve: Easing.outExpo, duration: 300}
             );
 
@@ -297,12 +391,12 @@ define(function (require, exports, module) {
         if (!scale) {
             scale = 1;
         }
-        var width = config.remainingWidth(GAME_ROW_NAME_WIDTH, GAME_ROW_ITEM_PLATFORM_WIDTH, GAME_ROW_ITEM_DATE_WIDTH);
-        var maxHeight = config.remainingHeight(HEADER_HEIGHT, FOOTER_HEIGHT);
-        var height = CALLOUT_RATIO * width;
+        var width = config.remainingWidth(config.GAME_ROW_NAME_WIDTH, config.GAME_ROW_ITEM_PLATFORM_WIDTH, config.GAME_ROW_ITEM_DATE_WIDTH);
+        var maxHeight = config.remainingHeight(config.HEADER_HEIGHT, config.FOOTER_HEIGHT);
+        var height = config.CALLOUT_RATIO * width;
         if (height > maxHeight) {
             height = maxHeight;
-            width = height / CALLOUT_RATIO;
+            width = height / config.CALLOUT_RATIO;
         }
 
         return [scale * width,
@@ -315,18 +409,19 @@ define(function (require, exports, module) {
             size: calloutSize()
         });
 
-        layout.content.add(new Modifier({
+        gameCalloutModifier = new Modifier({
             origin: [1, 0]
-        })).add(gameCallout);
+        });
+
+        layout.content.add(gameCalloutModifier).add(gameCallout);
 
         var gameCalloutNode = new RenderNode();
         //   var transformCallout = Transform.thenMove(Transform.rotateY(Math.PI/-4), [100,0,0]);
-        var gameCalloutModifier = new Modifier({
+
+        gameCallout.add(new Modifier({
             //  transform: transformCallout,
             origin: [0, 0]
-        });
-
-        gameCallout.add(gameCalloutModifier).add(gameCalloutNode);
+        })).add(gameCalloutNode);
 
         gameCalloutNode.add(new Surface({
             classes: ['game-callout-back']
@@ -439,26 +534,6 @@ define(function (require, exports, module) {
         mainContext.emit('game filter update');
     }
 
-    function gamePlatformTiles() {
-
-        gamePlatforms = Platform.gamesToPlatforms(games);
-
-        return _.map(gamePlatforms, function (platform) {
-            var platformSurface = new Surface({
-                content: _platformContent(platform),
-                classes: ['platform-icon']
-            });
-
-            hoverClasses(platformSurface, ['platform-icon', 'hover'], ['platform-icon'], 'platform');
-
-            platformSurface.on('click', function () {
-                setSearchPlatform(platform);
-                platformDialogContainer.setProperties({display: 'none'});
-            });
-            return platformSurface;
-        });
-    }
-
     function sortPrefix(field) {
         console.log('sort by ', field);
         if (field != sortKey) {
@@ -498,7 +573,7 @@ define(function (require, exports, module) {
 
     function gameToNode(game) {
         var gameRowContainer = new ContainerSurface({
-            size: [undefined, GAME_ROW_ITEM_HEIGHT],
+            size: [undefined, config.GAME_ROW_ITEM_HEIGHT],
             classes: ['game-row']
         });
 
@@ -535,23 +610,23 @@ define(function (require, exports, module) {
         });
 
         var platformSurface = new Surface({
-            size: [GAME_ROW_ITEM_PLATFORM_WIDTH, GAME_ROW_ITEM_HEIGHT],
+            size: [config.GAME_ROW_ITEM_PLATFORM_WIDTH, config.GAME_ROW_ITEM_HEIGHT],
             classes: ['game-row-platform', 'game-row-cell'],
             content: platformNames(game)
         });
 
         gameRowContainer.add(new Surface({
-            size: [GAME_ROW_NAME_WIDTH, GAME_ROW_ITEM_HEIGHT],
+            size: [config.GAME_ROW_NAME_WIDTH, config.GAME_ROW_ITEM_HEIGHT],
             content: game.name,
             classes: ['game-row-name', 'game-row-cell']
         }));
         gameRowContainer.add(new Modifier({
-            transform: Transform.translate(GAME_ROW_NAME_WIDTH, 0)
+            transform: Transform.translate(config.GAME_ROW_NAME_WIDTH, 0)
         })).add(platformSurface);
         gameRowContainer.add(new Modifier({
-            transform: Transform.translate(GAME_ROW_NAME_WIDTH + GAME_ROW_ITEM_PLATFORM_WIDTH, 0)
+            transform: Transform.translate(config.GAME_ROW_NAME_WIDTH + config.GAME_ROW_ITEM_PLATFORM_WIDTH, 0)
         })).add(new Surface({
-            size: [GAME_ROW_ITEM_DATE_WIDTH, GAME_ROW_ITEM_HEIGHT],
+            size: [config.GAME_ROW_ITEM_DATE_WIDTH, config.GAME_ROW_ITEM_HEIGHT],
             classes: ['game-row-date', 'game-row-cell'],
             content: game.original_release_date ? moment(new Date(game.original_release_date)).format('YYYY') : ''
         }));
@@ -560,11 +635,11 @@ define(function (require, exports, module) {
 
     function getListHeight() {
         return window.innerHeight
-            - (FOOTER_HEIGHT + HEADER_HEIGHT + ENTRY_HEIGHT + GAME_HEADER_HEIGHT);
+            - (config.FOOTER_HEIGHT + config.HEADER_HEIGHT + config.ENTRY_HEIGHT + config.GAME_HEADER_HEIGHT);
     }
 
     function sizeEntrySurface() {
-        var size = [config.remainingWidth(2 * ENTRY_MARGIN), 50];
+        var size = [config.remainingWidth(2 * config.ENTRY_MARGIN), 50];
         entrySurface.setSize(size);
         listContainer.setSize([undefined, getListHeight()]);
     }
@@ -577,13 +652,13 @@ define(function (require, exports, module) {
     function initSearchBar() {
 
         entrySurface = new ContainerSurface({
-            size: [window.innerWidth - 2 * ENTRY_MARGIN, ENTRY_HEIGHT],
+            size: [window.innerWidth - 2 * config.ENTRY_MARGIN, config.ENTRY_HEIGHT],
             classes: ['entry-frame']
         });
 
         var entryNode = new RenderNode({
             getSize: function () {
-                return  [window.innerWidth - 2 * ENTRY_MARGIN, ENTRY_HEIGHT - 20];
+                return  [window.innerWidth - 2 * config.ENTRY_MARGIN, config.ENTRY_HEIGHT - 20];
             }
         });
 
@@ -592,12 +667,12 @@ define(function (require, exports, module) {
             .add(new Surface({
                 content: 'Search for games:',
                 classes: ['label'],
-                size: [SEARCH_LABEL_SIZE, ENTRY_ROW_HEIGHT]
+                size: [config.SEARCH_LABEL_SIZE, config.ENTRY_ROW_HEIGHT]
             }));
 
         filterLabelSurface = new Surface({
             content: 'filter text',
-            size: [config.remainingWidth(ENTRY_LABEL_SIZE, ENTRY_SEARCH_BUTTON_WIDTH, 2 * ENTRY_MARGIN), ENTRY_ROW_HEIGHT],
+            size: [config.remainingWidth(config.ENTRY_LABEL_SIZE, config.ENTRY_SEARCH_BUTTON_WIDTH, 2 * config.ENTRY_MARGIN), config.ENTRY_ROW_HEIGHT],
             classes: ['filter-label']
         });
         filterLabelSurface.on('deploy', function () {
@@ -611,18 +686,18 @@ define(function (require, exports, module) {
 
         entrySurface.add(new Modifier({
             origin: [0, 0.5],
-            transform: Transform.translate(SEARCH_LABEL_SIZE + SEARCH_INPUT_SIZE + ENTRY_SEARCH_BUTTON_WIDTH, 0)
+            transform: Transform.translate(config.SEARCH_LABEL_SIZE + config.SEARCH_INPUT_SIZE + config.ENTRY_SEARCH_BUTTON_WIDTH, 0)
         })).add(filterLabelSurface);
 
         inputSurface = new Surface({
             content: '<input type="search" id="search-input" class="search" type="text" />',
             classes: ['search-input-div'],
-            size: [SEARCH_INPUT_SIZE, 25]
+            size: [config.SEARCH_INPUT_SIZE, 25]
         });
 
         var searchButton = new Surface({
             content: '<button class="search-button" id="search-button">List</button>',
-            size: [ENTRY_SEARCH_BUTTON_WIDTH, 25]
+            size: [config.ENTRY_SEARCH_BUTTON_WIDTH, 25]
         });
 
         searchButton.on('deploy', function () {
@@ -642,16 +717,16 @@ define(function (require, exports, module) {
 
         entrySurface.add(new Modifier({
             origin: [0, 0.33],
-            transform: Transform.translate(ENTRY_LABEL_SIZE, 0)}))
+            transform: Transform.translate(config.ENTRY_LABEL_SIZE, 0)}))
             .add(inputSurface);
 
         entrySurface.add(new Modifier({
             origin: [0, 0.33],
-            transform: Transform.translate(ENTRY_LABEL_SIZE + SEARCH_INPUT_SIZE, 0)
+            transform: Transform.translate(config.ENTRY_LABEL_SIZE + config.SEARCH_INPUT_SIZE, 0)
         })).add(searchButton);
 
         mainContentNode.add(new Modifier({
-            transform: Transform.translate(ENTRY_MARGIN, ENTRY_MARGIN)}))
+            transform: Transform.translate(config.ENTRY_MARGIN, config.ENTRY_MARGIN)}))
             .add(entryNode);
     }
 
@@ -669,20 +744,20 @@ define(function (require, exports, module) {
 
         listContainer.pipe(gameListScrollView);
 
-        mainContentNode.add(new Modifier({transform: Transform.translate(0, ENTRY_HEIGHT + GAME_HEADER_HEIGHT)}))
+        mainContentNode.add(new Modifier({transform: Transform.translate(0, config.ENTRY_HEIGHT + config.GAME_HEADER_HEIGHT)}))
             .add(listContainer);
 
         listHeaderNode = new RenderNode();
-        lhnModifier = new Modifier({opacity: 0, transform: Transform.thenMove(Transform.rotateX(Math.PI / 2), [0, ENTRY_HEIGHT]) });
+        lhnModifier = new Modifier({opacity: 0, transform: Transform.thenMove(Transform.rotateX(Math.PI / 2), [0, config.ENTRY_HEIGHT]) });
         mainContentNode.add(lhnModifier).add(listHeaderNode);
 
         listHeaderCS = new ContainerSurface({
-            size: [undefined, GAME_HEADER_HEIGHT],
+            size: [undefined, config.GAME_HEADER_HEIGHT],
             classes: ['game-header']
         });
 
         nameLabel = new Surface({
-            size: [GAME_ROW_NAME_WIDTH, GAME_HEADER_LABEL_HEIGHT],
+            size: [config.GAME_ROW_NAME_WIDTH, config.GAME_HEADER_LABEL_HEIGHT],
             classes: ['game-header-label', 'name'],
             content: sortPrefix('name') + 'Name'
         });
@@ -692,21 +767,21 @@ define(function (require, exports, module) {
         });
 
         platformLabelContainer = new ContainerSurface({
-            size: [GAME_ROW_ITEM_PLATFORM_WIDTH, GAME_HEADER_HEIGHT]
+            size: [config.GAME_ROW_ITEM_PLATFORM_WIDTH, config.GAME_HEADER_HEIGHT]
         });
 
         platformLabel = new Surface({content: 'Platform',
-            size: [GAME_ROW_ITEM_PLATFORM_WIDTH - ICON_WIDTH - ICON_MARGIN, GAME_HEADER_LABEL_HEIGHT],
+            size: [config.GAME_ROW_ITEM_PLATFORM_WIDTH - config.ICON_WIDTH - config.ICON_MARGIN, config.GAME_HEADER_LABEL_HEIGHT],
             classes: ['game-header-label']
         });
         platformLabelContainer.add(new Modifier({
             origin: [0, 0.5],
-            transform: Transform.translate(ICON_WIDTH + ICON_MARGIN, 0)
+            transform: Transform.translate(config.ICON_WIDTH + config.ICON_MARGIN, 0)
         })).add(platformLabel);
 
         var platformSortButton = new Surface({
             content: '&#9680;',
-            size: [ICON_WIDTH, GAME_HEADER_LABEL_HEIGHT],
+            size: [config.ICON_WIDTH, config.GAME_HEADER_LABEL_HEIGHT],
             classes: ['sort-icon']
         });
 
@@ -724,7 +799,7 @@ define(function (require, exports, module) {
             .add(platformSortButton);
 
         releasedLabel = new Surface({
-            size: [GAME_ROW_ITEM_DATE_WIDTH, GAME_HEADER_LABEL_HEIGHT],
+            size: [config.GAME_ROW_ITEM_DATE_WIDTH, config.GAME_HEADER_LABEL_HEIGHT],
             classes: ['game-header-label'],
             content: 'Released',
             properties: {
@@ -735,33 +810,16 @@ define(function (require, exports, module) {
             setSortKey('released');
         });
 
-        var timelineButton = new Surface({
-            size: [150, GAME_HEADER_HEIGHT - (2 * 4)],
-            content: 'View Timeline',
-            classes: ['button', 'info-button', 'icon-button']
-        });
-
-        timelineButton.on('click', viewTimeline);
-
         listHeaderNode.add(listHeaderCS);
         listHeaderCS.add(new Modifier({
             origin: [0, 0.5]
         })).add(nameLabel);
-        listHeaderCS.add(new Modifier({ transform: Transform.translate(GAME_ROW_NAME_WIDTH, 0)}))
+        listHeaderCS.add(new Modifier({ transform: Transform.translate(config.GAME_ROW_NAME_WIDTH, 0)}))
             .add(platformLabelContainer);
         listHeaderCS.add(new Modifier({
-            origin: [0, 0.5], transform: Transform.translate(GAME_ROW_NAME_WIDTH + GAME_ROW_ITEM_PLATFORM_WIDTH, 0)}))
+            origin: [0, 0.5], transform: Transform.translate(config.GAME_ROW_NAME_WIDTH + config.GAME_ROW_ITEM_PLATFORM_WIDTH, 0)}))
             .add(releasedLabel);
 
-        listHeaderCS.add(new Modifier({
-            origin: [0, 0.5],
-            transform: Transform.translate(GAME_ROW_NAME_WIDTH + GAME_ROW_ITEM_PLATFORM_WIDTH + GAME_ROW_ITEM_DATE_WIDTH, 0)
-        })).add(timelineButton);
-    }
-
-    function viewTimeline() {
-        var timeline = new Timeline(searchText, foundGames);
-        sceneBox.show(timeline, {duration: 0, easing: function(){ return 1}});
     }
 
     /**
@@ -779,12 +837,12 @@ define(function (require, exports, module) {
         });
 
         layout = new HeaderFooterLayout({
-            headerSize: HEADER_HEIGHT,
+            headerSize: config.HEADER_HEIGHT,
             footerSize: 50
         });
 
         layout.header.add(new Surface({
-            size: [undefined, HEADER_HEIGHT],
+            size: [undefined, config.HEADER_HEIGHT],
             content: "<h1>GameGalaxy</h1>",
             classes: ["header"],
             properties: {
@@ -808,21 +866,29 @@ define(function (require, exports, module) {
             .add(
             new Surface({
                 size: [undefined, true],
-                content:   "Type a phrase in the field above to begin", elementType: 'p'})
+                content: "Type a phrase in the field above to begin", elementType: 'p'})
         );
-
 
         mainContentNode = new RenderNode({
         });
         mainContentNode.add(new Modifier({
-            translate: Transform.translate(ENTRY_MARGIN, ENTRY_MARGIN),
-            size: [window.innerWidth - 2 * ENTRY_MARGIN, ENTRY_HEIGHT]
+            translate: Transform.translate(config.ENTRY_MARGIN, config.ENTRY_MARGIN),
+            size: [window.innerWidth - 2 * config.ENTRY_MARGIN, config.ENTRY_HEIGHT]
         }));
 
-        layout.content.add(mainContentNode);
+        sceneBox = new RenderController({
+            inTransform: Transform.translate(window.innerHeight, 0, 0),
+            inOrigin: [0, 0],
+            inOpacity: 0.7,
+            outTransform: Transform.translate(-window.innerHeight, 0, 0),
+            outOrigin: [0, 0]
+        });
+        sceneBox.show(mainContentNode, {duration: 0});
+
+        layout.content.add(sceneBox);
 
         footerSurface = new Surface({
-            size: [undefined, FOOTER_HEIGHT],
+            size: [undefined, config.FOOTER_HEIGHT],
             content: "enter a search term to begin",
             classes: ["footer"],
             properties: {
@@ -832,15 +898,17 @@ define(function (require, exports, module) {
         });
         layout.footer.add(footerSurface);
 
-        sceneBox = new Lightbox({});
-        sceneBox.show(layout, {duration: 0});
 
-        mainContext.add(sceneBox);
+        mainContext.add(layout);
 
         mainContext.on('resize', sizeEntrySurface);
     }
 
+
     initLayout();
+
+    addTimelineButton();
+    addListButton();
 
     initSearchBar();
 

@@ -12,7 +12,7 @@ define(function (require, exports, module) {
     exports.HEADER_HEIGHT = 120;
     exports.FOOTER_HEIGHT = 50;
     exports.SEARCH_LABEL_SIZE = 150;
-    exports.SEARCH_INPUT_SIZE = 350;
+    exports.SEARCH_INPUT_SIZE = 250;
 
     // game row item sizes
     exports.GAME_ROW_ITEM_HEIGHT = 30;
@@ -36,8 +36,8 @@ define(function (require, exports, module) {
     exports.CALLOUT_RATIO = 1.6;
     exports.PLATFORM_INNER_WIDTH = exports.PLATFORM_DIALOG_WIDTH - exports.PLATFORM_MARGIN * 2;
 
-    exports.TIMELINE_ICON_WIDTH = 150;
-    exports.TIMELINE_ICON_HEIGHT = 150;
+    exports.TIMELINE_ICON_WIDTH = 120;
+    exports.TIMELINE_ICON_HEIGHT = 140;
     exports.TIMELINE_ICON_IMAGE_WIDTH = 80;
     exports.TIMELINE_ICON_IMAGE_HEIGHT = 71;
     exports.ICON_SQUASH_SCALE = 0.5;
@@ -46,6 +46,7 @@ define(function (require, exports, module) {
     exports.TIMELINE_ICON_HEAD_HEIGHT = 25;
 
     exports.context = Engine.createContext();
+    exports.context.setPerspective(window.innerWidth);
 
     exports.monthNames = 'Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec'.split(',');
 
