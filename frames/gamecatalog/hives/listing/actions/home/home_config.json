@@ -2,7 +2,8 @@
     "static": {
         "js": "/js/home",
         "css": "/css/home",
-        "img": "/img/home"
+        "img": "/img/home",
+        "template": "/template/home"
     },
     "javascript": [
         {

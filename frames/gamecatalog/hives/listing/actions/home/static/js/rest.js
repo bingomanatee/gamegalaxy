@@ -1,5 +1,7 @@
 define(function (require, exports, module) {
     module.exports = function (url, type, params, onSuccess, onFail) {
+        var noParse = params.noparse;
+        delete params.noparse;
 
         var request = new XMLHttpRequest();
         request.open(type.toUpperCase(), url, true);
@@ -22,6 +24,9 @@ define(function (require, exports, module) {
 
         request.onload = function () {
             if (request.status >= 200 && request.status < 400) {
+                if (noParse){
+                    return onSuccess(request.responseText);
+                }
                 try {
                     data = JSON.parse(request.responseText);
                 } catch (err) {

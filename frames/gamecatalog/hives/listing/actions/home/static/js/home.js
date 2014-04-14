@@ -33,6 +33,7 @@ define(function (require, exports, module) {
     var config = require('config');
     var giantbomb = require('giantbomb');
     var Platform = require('Platform');
+    var rest = require('rest');
 
     // platform
     var platformDialogContainer;
@@ -72,7 +73,7 @@ define(function (require, exports, module) {
     var gameCalloutInfoCloseButton;
     var gameViewLock = false;
     var gameViewLockRow;
-    var lhnModifier;
+    var listHeaderModifier;
 
     // state values
     var searchChangeDelay;
@@ -97,7 +98,7 @@ define(function (require, exports, module) {
     var mainSurface;
     var filterLabelSurface;
     var sceneBox;
-    var initPromptMod;
+    var initPromptModifier;
 
     var timelineButton, listButton;
 
@@ -105,8 +106,8 @@ define(function (require, exports, module) {
     var platform = null;
 
 
-    function viewList(){
-        if (viewPanel == LIST){
+    function viewList(force){
+        if ((!force) && (viewPanel == LIST)){
             return;
         }
 
@@ -318,8 +319,8 @@ define(function (require, exports, module) {
 
     function updateGameList(text) {
         if (promptUp) {
-            initPromptMod.halt();
-            initPromptMod.setOpacity(0, {duration: 2000, easing: Easing.outExpo});
+            initPromptModifier.halt();
+            initPromptModifier.setOpacity(0, {duration: 2000, easing: Easing.outExpo});
             promptUp = false;
         }
         searchChangeDelay = null;
@@ -377,12 +378,12 @@ define(function (require, exports, module) {
 
             _expandList(data);
 
-            lhnModifier.setTransform(
+            listHeaderModifier.setTransform(
                 Transform.translate(0, config.ENTRY_HEIGHT),
                 { curve: Easing.outExpo, duration: 300}
             );
 
-            lhnModifier.setOpacity(1, { curve: _.identity, duration: 1000});
+            listHeaderModifier.setOpacity(1, { curve: _.identity, duration: 1000});
         });
 
     }
@@ -410,7 +411,8 @@ define(function (require, exports, module) {
         });
 
         gameCalloutModifier = new Modifier({
-            origin: [1, 0]
+            origin: [1, 0],
+            opacity: 0
         });
 
         layout.content.add(gameCalloutModifier).add(gameCallout);
@@ -513,7 +515,7 @@ define(function (require, exports, module) {
         if (game) {
             gameCalloutTitle.setContent(_gameHeader(game));
             if (game.image) {
-                gameCalloutImage.setContent(game.image.medium_url);
+                gameCalloutImage.setContent(game.image.super_url);
                 gameCalloutImage.setProperties({display: 'block'});
             } else {
                 gameCalloutImage.setProperties({display: 'none'});
@@ -702,7 +704,7 @@ define(function (require, exports, module) {
 
         searchButton.on('deploy', function () {
             document.getElementById('search-button').addEventListener('click', function () {
-                filterLabelSurface.setContent("Loading results --- please wait");
+                filterLabelSurface.setContent("");
                 searchText = document.getElementById('search-input').value;
 
                 if (searchChangeDelay) {
@@ -748,8 +750,8 @@ define(function (require, exports, module) {
             .add(listContainer);
 
         listHeaderNode = new RenderNode();
-        lhnModifier = new Modifier({opacity: 0, transform: Transform.thenMove(Transform.rotateX(Math.PI / 2), [0, config.ENTRY_HEIGHT]) });
-        mainContentNode.add(lhnModifier).add(listHeaderNode);
+        listHeaderModifier = new Modifier({opacity: 0, transform: Transform.thenMove(Transform.rotateX(Math.PI / 2), [0, config.ENTRY_HEIGHT]) });
+        mainContentNode.add(listHeaderModifier).add(listHeaderNode);
 
         listHeaderCS = new ContainerSurface({
             size: [undefined, config.GAME_HEADER_HEIGHT],
@@ -858,14 +860,16 @@ define(function (require, exports, module) {
         });
         layout.content.add(mainSurface);
 
-        initPromptMod = new Modifier({
-            origin: [0, 0.25]
+        initPromptModifier = new Modifier({
+            origin: [0, 0.25],
+            opacity: 0
         });
 
-        layout.content.add(initPromptMod)
+        layout.content.add(initPromptModifier)
             .add(
             new Surface({
                 size: [undefined, true],
+                classes: ['intro-prompt'],
                 content: "Type a phrase in the field above to begin", elementType: 'p'})
         );
 
@@ -904,6 +908,41 @@ define(function (require, exports, module) {
         mainContext.on('resize', sizeEntrySurface);
     }
 
+    function loadIntro() {
+        rest('/template/home/intro.html', 'get', {noparse: 1}, function(content){
+            console.log('content: ', content);
+
+            var dialog = new Surface({
+                content: content,
+                classes: ['intro-block']
+            });
+
+            var doneButton = new Surface({
+                classes: ['button', 'info-button'],
+                size: [150, 30],
+                content: 'Continue'
+            });
+
+            doneButton.on('click', function(){
+                viewList(true);
+                initPromptModifier.setOpacity(1, {duration: 2});
+            });
+
+            var dRoot = new RenderNode();
+            dRoot.add(dialog);
+
+            dRoot.add(new Modifier({
+                origin: [1, 1],
+                transform: Transform.translate(-40, -40)
+            })).add(doneButton);
+
+            var root = new View();
+            root.add(new Modifier({size: [config.remainingWidth(100), config.remainingHeight(100, config.HEADER_HEIGHT)], origin: [0.5, 0.5]}))
+                .add(dRoot);
+
+            sceneBox.show(root);
+        })
+    }
 
     initLayout();
 
@@ -919,6 +958,8 @@ define(function (require, exports, module) {
     highlightGame();
 
     initCallout();
+
+    loadIntro();
 
     mainContext.emit('game filter update');
 })
